@@ -3,6 +3,7 @@
 *.bz2
 wiki_data/retriever
 wiki_data/*.txt
+knowns/known_1000.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
