@@ -76,7 +76,7 @@ if __name__=='__main__':
     parser.add_argument('--plot_dir', default='plots/ablations')
     parser.add_argument('--experiment_name', type=str)
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
-    parser.add_argument('--dataset', default='dolma_small')
+    parser.add_argument('--dataset', default='dolma-small')
     parser.add_argument('--metric', default='all')
     parser.add_argument(
         '--intervention_type',

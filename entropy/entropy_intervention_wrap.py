@@ -53,7 +53,7 @@ def run_if_necessary(
         args.data_dir,
         args.output_dir,
         args.model,
-        args.token_dataset,
+        args.token_dataset.split('/')[-1],
         neuron_subset_name,
         str(args.intervention_type)+'_'+str(args.intervention_param),
     )
