@@ -78,7 +78,11 @@ if __name__=='__main__':
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument('--dataset', default='dolma_small')
     parser.add_argument('--metric', default='all')
-    parser.add_argument('--intervention_type', default='zero_ablation')
+    parser.add_argument(
+        '--intervention_type',
+        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation"],
+        default="zero_ablation",
+    )
     parser.add_argument(
         '--log', type=bool, default=True, help="logarithmic y-axis in the histograms"
     )

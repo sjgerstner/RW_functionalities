@@ -75,6 +75,7 @@ if __name__ == '__main__':
     # general arguments
     parser.add_argument('--work_dir', default='.')
     parser.add_argument('--data_dir', default='.')
+    parser.add_argument('--wcos_dir', default='.')
     parser.add_argument(
         '--output_dir', default='intervention_results')
     parser.add_argument(
@@ -83,7 +84,7 @@ if __name__ == '__main__':
         help='Name of model from TransformerLens')
     parser.add_argument(
         '--token_dataset',
-        default='neuroscope/datasets/dolma_small',
+        default='neuroscope/datasets/dolma-small',
         help='Name of cached feature dataset')
     parser.add_argument(
         '--activation_location', default='mlp.hook_post',
@@ -118,8 +119,10 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--intervention_type', type=str, default=None,
-        help='Type of intervention to perform')
+        '--intervention_type',
+        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation"],
+        default="zero_ablation",
+    )
     parser.add_argument(
         '--intervention_param', type=float, default=None,
         help='Parameter for intervention type (eg, threshold or fixed activation)')
@@ -136,7 +139,7 @@ if __name__ == '__main__':
 
     device = args.device
 
-    model = HookedTransformer.from_pretrained(args.model, device=device)
+    model = HookedTransformer.from_pretrained(args.model, device=device, refactor_glu=True)
     #model.to(device)
     model.eval()
     torch.set_grad_enabled(False)
