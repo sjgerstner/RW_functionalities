@@ -10,6 +10,8 @@ Jupyter to Python script,
 only subject enrichment code and only for final subject position,
 using transformer_lens,
 more fine-grained ablations.
+
+Run from the repo's main dir: python -m attributes.enrichment
 """
 
 from argparse import ArgumentParser
@@ -24,23 +26,29 @@ import torch
 from tqdm import tqdm
 from transformer_lens import HookedTransformer
 # Utilities
-from .enrichment_utils import (
+from attributes.utils import (
     find_token_range,
     record_logitlens,
     decode_tokens,
 )
-from ..neuron_choice import neuron_choice
-from ..utils import NAME_TO_COMBO
+from neuron_choice import neuron_choice
+from utils import NAME_TO_COMBO
 
 if __name__=="__main__":
     parser = ArgumentParser()
     parser.add_argument('--work_dir', default='.')
+    parser.add_argument('--wcos_dir', default='.')
+    parser.add_argument('--wiki_dir', default='wiki_data')
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     #parser.add_argument('--subject_repr_layer', default=40)
     #parser.add_argument('--num_block_layers', default=10)
     #parser.add_argument('--paragraphs_data_path', default=None)
     parser.add_argument('--topk', default=50)
-    parser.add_argument('--intervention_type', default=None)
+    parser.add_argument(
+        '--intervention_type',
+        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation"],
+        default="zero_ablation",
+    )
     parser.add_argument('--activation_location', default='mlp.hook_pre')
     parser.add_argument(
         '--n_neurons', default=None,
@@ -55,17 +63,18 @@ if __name__=="__main__":
         (ablate more neurons for less frequently activated classes)"""
     )
     parser.add_argument(
-        '--constant_class', default='depletion', help="The class from which to ablate n_neurons"
+        '--constant_class', default='weakening',
+        help="The class from which to ablate n_neurons"
     )
     parser.add_argument(
         '--subsets',
         nargs='+',
         default=[
-            "enrichment",
-            "conditional enrichment",
+            "strengthening",
+            "conditional strengthening",
             "proportional change",
-            "depletion",
-            "conditional depletion",
+            "weakening",
+            "conditional weakening",
         ]
     )
     args = parser.parse_args()
@@ -145,7 +154,7 @@ if __name__=="__main__":
 
     if args.by_freq:
         N_NEURONS = int(args.n_neurons)
-        freq_data = pd.read_pickle(f'plots/freq/{args.by_freq}')
+        freq_data = pd.read_pickle(f'plots/freq/{args.by_freq}_means.pickle')
         constant_freq = freq_data.loc[args.constant_class]["true"]
         CONSTANT = constant_freq * N_NEURONS
     elif args.n_neurons:
@@ -161,9 +170,9 @@ if __name__=="__main__":
             #TODO number of neurons to ablate from this class
             #create neuron subsets
             nice_subset, random_subset = neuron_choice(
-                args, NAME_TO_COMBO[subset_name], subset=N_NEURONS#TODO
+                args, NAME_TO_COMBO[subset_name], subset=N_NEURONS
             )
-            # Projection of token representations while applying knockouts to strengthening neurons
+            # Projection of token representations while applying knockouts to, say, strengthening neurons
             if test1:
                 nice_df = record_logitlens(
                     args, knowns_df, model,
@@ -193,12 +202,13 @@ if __name__=="__main__":
     # %%
     # Processing of Wikipedia paragraphs for automatic attribute rate evaluation.
 
-    if not os.path.exists(f'{args.work_dir}/data/wiki.pickle'):
+    WIKI_CLEANED = f'{args.work_dir}/{args.wiki_dir}/wiki_cleaned.pickle'
+    if not os.path.exists(WIKI_CLEANED):
         # This should be a path to a csv file
         # with 2 columns and a header of column names "subject" and "paragraphs".
         # Each entry should have (a) a subject (string) from the "knowns" data (knowns_df)
         # and (b) paragraphs concatenated with space about the subject (a single string).
-        df_wiki = pd.read_csv(f'{args.work_dir}/data/wiki.csv')
+        df_wiki = pd.read_csv(f'{args.work_dir}/{args.wiki_dir}/wiki.csv')
         df_wiki = df_wiki.fillna('')
         # Tokenize, remove duplicate tokens, stopwords, and subwords.
         df_wiki["context_tokenized_dedup"] = df_wiki["paragraphs"].progress_apply(
@@ -216,9 +226,9 @@ if __name__=="__main__":
         df_wiki["context_tokenized_dedup_no-stopwords_len"] = df_wiki["context_tokenized_dedup_no-stopwords"].apply(
             len#lambda x: len(x)
         )
-        df_wiki.to_pickle(f'{args.work_dir}/data/wiki.pickle')
+        df_wiki.to_pickle(WIKI_CLEANED)
     else:
-        df_wiki = pd.read_pickle(f'{args.work_dir}/data/wiki.pickle')
+        df_wiki = pd.read_pickle(WIKI_CLEANED)
 
 
     # %%
