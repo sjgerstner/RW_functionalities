@@ -6,6 +6,8 @@ wiki_data/*.txt
 knowns/known_1000.json
 se/logitlens.csv
 se/hs_cache_OLMo-7B-0424-hf.pt
+#TODO comment out:
+intervention_results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

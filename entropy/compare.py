@@ -5,7 +5,7 @@ import os
 
 import torch
 
-from ..plotting import aligned_histograms
+from plotting import aligned_histograms
 
 #%%
 def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation'):
@@ -62,7 +62,7 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
     aligned_histograms(
         list_data,
         subtitles=subtitles,
-        savefile=f'{experiment_dir}/{metric}.pdf',
+        savefile=f'{experiment_dir}/{metric}{"_log" if args.log else ""}.pdf',
         suptitle = None,#f'{absrel} effect of neurons on {metric},\nas measured by {intervention_type}',
         xlabel=f'{metric}(clean) {absrel} {metric}(ablated)',
         ncols = 2,
@@ -72,8 +72,8 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
 #%%
 if __name__=='__main__':
     parser = ArgumentParser()
-    parser.add_argument('--data_dir')
-    parser.add_argument('--plot_dir')
+    parser.add_argument('--data_dir', default='.')
+    parser.add_argument('--plot_dir', default='plots/ablations')
     parser.add_argument('--experiment_name', type=str)
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument('--dataset', default='dolma_small')
@@ -81,7 +81,7 @@ if __name__=='__main__':
     parser.add_argument('--intervention_type', default='zero_ablation')
     parser.add_argument(
         '--log', type=bool, default=True, help="logarithmic y-axis in the histograms"
-    )#TODO different directory for log vs. linear histograms
+    )
     parser.add_argument('--neurons', nargs='+', default=['weakening'])
     args = parser.parse_args()
     if args.metric=='all':

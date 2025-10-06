@@ -5,9 +5,9 @@ import torch
 import datasets
 from transformer_lens import HookedTransformer
 
-from .entropy_intervention import run_intervention_experiment
-from ..neuron_choice import neuron_choice
-from ..utils import NAME_TO_COMBO
+from entropy.entropy_intervention import run_intervention_experiment
+from neuron_choice import neuron_choice
+from utils import NAME_TO_COMBO
 
 def run_with_baseline(
     args,
@@ -73,8 +73,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # general arguments
-    parser.add_argument('--work_dir')
-    parser.add_argument('--data_dir')
+    parser.add_argument('--work_dir', default='.')
+    parser.add_argument('--data_dir', default='.')
     parser.add_argument(
         '--output_dir', default='intervention_results')
     parser.add_argument(
@@ -83,7 +83,7 @@ if __name__ == '__main__':
         help='Name of model from TransformerLens')
     parser.add_argument(
         '--token_dataset',
-        default='dolma_small',
+        default='neuroscope/datasets/dolma_small',
         help='Name of cached feature dataset')
     parser.add_argument(
         '--activation_location', default='mlp.hook_post',
