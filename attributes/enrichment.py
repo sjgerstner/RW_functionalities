@@ -172,6 +172,8 @@ if __name__=="__main__":
             nice_subset, random_subset = neuron_choice(
                 args, NAME_TO_COMBO[subset_name], subset=N_NEURONS
             )
+            if nice_subset is None:#too few neurons in class
+                continue
             # Projection of token representations while applying knockouts to, say, strengthening neurons
             if test1:
                 nice_df = record_logitlens(

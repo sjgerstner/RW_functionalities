@@ -60,6 +60,7 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
             neuron_list = random.sample(neuron_list, subset)
         elif subset>len(neuron_list):
             print(f"Warning: category {COMBO_TO_NAME[category_key]} only contains {len(neuron_list)} neurons.")
+            return None, None
     if baseline:
         #TODO adapt baseline to activation frequencies
         baseline_list = random_baseline(neuron_list, data['categories'], category_key)

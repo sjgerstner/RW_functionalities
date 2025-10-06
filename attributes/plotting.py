@@ -31,7 +31,7 @@ parser = ArgumentParser()
 # parser.add_argument('--topk', default=50)
 # parser.add_argument('--intervention_type', default=None)
 # parser.add_argument('--activation_location', default='mlp.hook_pre')
-parser.add_argument('--work_dir')
+parser.add_argument('--work_dir', default='.')
 args = parser.parse_args()
 
 OUT_DIR = f'{args.work_dir}/se'
@@ -56,7 +56,7 @@ for name in all_subset_names:
         #TODO continue?
         pass
     else:
-        os.mkdir(plot_dir)
+        os.makedirs(plot_dir)
     plt.figure(figsize=(5,3))
     ax = sns.lineplot(data=data,
                     x="layer", y="top_k_preds_in_context",#we use zero-based layer indexing
