@@ -66,6 +66,8 @@ if "category_plots" in subexps or "table" in subexps:#not os.path.exists(CATEGOR
     for i,key in enumerate(COMBO_TO_NAME.keys()):
         #lists of (layer neuron) tuples
         neuron_list, baseline_list = neuron_choice.neuron_choice(args, key)
+        if neuron_list is None:#too few neurons in category
+            continue
         my_data.append([freq_tensor[index].item() for index in neuron_list])
         my_data.append([freq_tensor[index].item() for index in baseline_list])
 
