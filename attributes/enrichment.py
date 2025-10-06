@@ -34,7 +34,7 @@ from ..utils import NAME_TO_COMBO
 
 if __name__=="__main__":
     parser = ArgumentParser()
-    parser.add_argument('--work_dir')
+    parser.add_argument('--work_dir', default='.')
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     #parser.add_argument('--subject_repr_layer', default=40)
     #parser.add_argument('--num_block_layers', default=10)
