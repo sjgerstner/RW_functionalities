@@ -19,7 +19,7 @@ if __name__=='__main__':
     parser = ArgumentParser()
     parser.add_argument('--knowns_dir', default='knowns')
     parser.add_argument('--wiki_dir', default='wiki_data')
-    parser.add_argument('--out_dir')
+    parser.add_argument('--out_dir', default='wiki_data')
     args=parser.parse_args()
 
     #get list of subjects
