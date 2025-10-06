@@ -13,9 +13,11 @@ from plotting import SHORT_TO_LONG, aligned_histograms, freq_sim_scatter
 from utils import COMBO_TO_NAME
 
 parser = ArgumentParser()
-parser.add_argument('--work_dir', default=None)
+parser.add_argument('--work_dir', default='.')
 parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424-hf_dolma-small')
-parser.add_argument('--wcos_dir', default='wcos_casestudies')
+parser.add_argument('--wcos_dir',
+    default='.'#'wcos_casestudies'
+)
 parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
 parser.add_argument('--log', action='store_true')
 parser.add_argument('--metric', default='summary_freq')#TODO support for other metrics
