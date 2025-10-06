@@ -108,6 +108,7 @@ dependencies:
   - libxcb=1.17.0=h9b100fa_0
   - libxkbcommon=1.9.1=h69220b7_0
   - libxml2=2.13.8=hfdd30dd_0
+  - llvmlite=0.44.0=py312hc1e8f15_1
   - lmdb=0.9.29=h2531618_0
   - lz4-c=1.9.4=h6a678d5_1
   - markupsafe=3.0.2=py312h5eee18b_0
@@ -131,11 +132,12 @@ dependencies:
   - nltk=3.9.1=py312h06a4308_0
   - notebook=7.4.4=py312h06a4308_0
   - notebook-shim=0.2.4=py312h06a4308_0
+  - numba=0.61.2=py312h6a678d5_0
   - numexpr=2.11.0=py312hf4471f9_0
-  - numpy-base=2.0.1=py312h0da6c21_1
+  - numpy-base=2.0.0=py312h0da6c21_1
   - openjpeg=2.5.2=h0d4d230_1
   - openldap=2.6.4=h42fbc30_0
-  - openssl=3.0.17=h5eee18b_0
+  - openssl=3.0.18=hd6dcaed_0
   - overrides=7.4.0=py312h06a4308_0
   - packaging=25.0=py312h06a4308_0
   - pandoc=2.12=h06a4308_3
@@ -197,7 +199,6 @@ dependencies:
   - tornado=6.5.1=py312h5eee18b_0
   - tqdm=4.67.1=py312he106c6f_0
   - traitlets=5.14.3=py312h06a4308_0
-  - typing_extensions=4.12.2=py312h06a4308_0
   - tzdata=2025b=h04d1e81_0
   - unicodedata2=15.1.0=py312h5eee18b_1
   - urllib3=2.5.0=py312h06a4308_0
@@ -249,6 +250,7 @@ dependencies:
       - filelock==3.18.0
       - frozenlist==1.7.0
       - fsspec==2025.3.0
+      - git-filter-repo==2.47.0
       - gitdb==4.0.12
       - gitpython==3.1.45
       - hf-xet==1.1.7
@@ -300,7 +302,7 @@ dependencies:
       - transformers-stream-generator==0.0.5
       - triton==3.4.0
       - typeguard==4.4.4
-      - typing-extensions==4.14.1
+      - typing-extensions==4.15.0
       - typing-inspection==0.4.1
       - wadler-lindig==0.1.7
       - wandb==0.21.1
