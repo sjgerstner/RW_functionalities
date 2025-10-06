@@ -20,10 +20,10 @@ So feel free to change your local version of the code.
 * ```wcos_casestudies```: Code for most experiments
   * ```utils.py``` and ```plotting.py``` contain helper functions
   * ```main.py```: Run this to reproduce Section 5. There are options for each sub-experiment (see the argparse part of the code).
-  * ```casestudies.py```: If you open this in VS Code, you will be able to run it cell by cell like a Jupyter notebook. It first generates the data for Appendix E (IO classes vs. functional roles), then selects the neurons for the case studies of Section 6 and does the weight-based part of the case studies.
+  * ```casestudies.py```: If you open this in VS Code, you will be able to run it cell by cell like a Jupyter notebook. It first generates the data for Appendix E (RW classes vs. functional roles), then selects the neurons for the case studies of Section 6 and does the weight-based part of the case studies.
   * ```selected_plot.py```: reproduce Figure 5 (selected layers of Llama).
   * ```defplot.py```: reproduce Figure 2 (definition plot).
-* ```interactive.ipynb```: interactive vector visualisations of IO classes.
+* ```interactive.ipynb```: interactive vector visualisations of RW classes.
 
 ## Steps to reproduce
 
@@ -52,7 +52,7 @@ or any subset of these options / specific model names.
 
 ### Section 6 (Case studies)
 
-#### Appendix E: IO classes vs. functional roles
+#### Appendix E: RW classes vs. functional roles
 
 For our case studies we limit the search space to prediction neurons,
 so we first need to find out which these are.
