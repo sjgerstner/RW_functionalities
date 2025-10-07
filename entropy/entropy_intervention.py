@@ -195,6 +195,8 @@ def run_intervention_experiment(
 
     if neuron_subset is None:
         neuron_subset = args.neuron_subset
+        # if neuron_subset is None:
+        #     return
 
     conditioning_values = {}
     hooks = []
