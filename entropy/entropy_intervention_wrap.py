@@ -17,15 +17,21 @@ def run_with_baseline(
     neuron_list=None,
     random_baseline=None,
 ):
-    if neuron_list is None:
-        neuron_list = []
+    # if neuron_list is None:
+    #     neuron_list = []
+    if neuron_list:
+        neuron_subset_name=f'{args.neuron_subset_name}{args.n_neurons if args.n_neurons else ""}'
+    else:
+        neuron_subset_name='baseline'
+        random_baseline=None
+        
     run_if_necessary(
         args,
         model,
         tokenized_dataset,
         device,
         neuron_subset=neuron_list,
-        neuron_subset_name=f'{args.neuron_subset_name}{args.n_neurons}'
+        neuron_subset_name=neuron_subset_name
     )
     if random_baseline is not None and args.gate is None and args.post is None:
         run_if_necessary(
@@ -58,6 +64,7 @@ def run_if_necessary(
         str(args.intervention_type)+'_'+str(args.intervention_param),
     )
 
+    print(neuron_subset_name)
     if not os.path.exists(save_path):
         run_intervention_experiment(
             args,
@@ -68,6 +75,8 @@ def run_if_necessary(
             neuron_subset_name,
             save_path=save_path,
         )
+    else:
+        print("already computed, skipping")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

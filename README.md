@@ -95,10 +95,20 @@ python -m attributes.plotting
 
 Including conditional ablations.
 
+To run the interventions:
+
 ```[bash]
-#run the interventions:
 bash entropy_interventions.sh
-#get the plots:
+```
+
+The above command will run up to 5 different ablations in parallel on different GPUs.
+If you don't have that many resources (but more time),
+you can remove the "&" signs from the script,
+or call the python commands by hand one by one.
+
+To get the plots:
+
+```[bash]
 python -m entropy.compare --experiment_name 24 --neurons strengthening24 conditional_strengthening24 proportional_change24 conditional_weakening24 weakening24
 python -m entropy.compare --experiment_name 243 --neurons conditional_strengthening243 proportional_change243 conditional_weakening243 weakening243
 python -m entropy.compare --experiment_name weakening_complete --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post-
