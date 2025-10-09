@@ -102,9 +102,10 @@ bash entropy_interventions.sh
 ```
 
 The above command will run up to 5 different ablations in parallel on different GPUs.
-If you don't have that many resources (but more time),
-you can remove the "&" signs from the script,
-or call the python commands by hand one by one.
+If you don't have that many GPUs available (but more time),
+you can call the python commands by hand one by one.
+Each ablation run needs approximately 7-8 GPU hours,
+and there are 23 different ablations to run.
 
 To get the plots:
 
