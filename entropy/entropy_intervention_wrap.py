@@ -16,15 +16,16 @@ def run_with_baseline(
     device,
     neuron_list=None,
     random_baseline=None,
+    subset=None,
 ):
     # if neuron_list is None:
     #     neuron_list = []
     if neuron_list:
-        neuron_subset_name=f'{args.neuron_subset_name}{args.n_neurons if args.n_neurons else ""}'
+        neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
     else:
         neuron_subset_name='baseline'
         random_baseline=None
-        
+
     run_if_necessary(
         args,
         model,
@@ -40,7 +41,7 @@ def run_with_baseline(
             tokenized_dataset,
             device,
             neuron_subset=random_baseline,
-            neuron_subset_name=f'{args.neuron_subset_name}{args.n_neurons}_baseline'
+            neuron_subset_name=f'{neuron_subset_name}_baseline'
         )
 
 def run_if_necessary(
@@ -159,8 +160,12 @@ if __name__ == '__main__':
     if args.neuron_subset_name=='baseline':
         neuron_list = []
         random_baseline=None
+        subset=None
     else:
-        subset = float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons)
+        if (args.n_neurons is None) or (args.n_neurons=='None'):
+            subset = None
+        else:
+            subset = float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons)
         neuron_list, random_baseline = neuron_choice(
             args,
             category_key=NAME_TO_COMBO[args.neuron_subset_name],
@@ -173,5 +178,6 @@ if __name__ == '__main__':
         tokenized_dataset,
         device,
         neuron_list,
-        random_baseline
+        random_baseline,
+        subset=subset,
     )
