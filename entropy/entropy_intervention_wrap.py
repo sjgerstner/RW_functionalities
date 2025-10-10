@@ -5,7 +5,7 @@ import torch
 import datasets
 from transformer_lens import HookedTransformer
 
-from entropy_intervention import run_intervention_experiment
+from entropy.entropy_intervention import run_intervention_experiment
 from neuron_choice import neuron_choice
 from utils import NAME_TO_COMBO
 
@@ -16,16 +16,26 @@ def run_with_baseline(
     device,
     neuron_list=None,
     random_baseline=None,
+    subset=None,
 ):
-    if neuron_list is None:
-        neuron_list = []
+    # if neuron_list is None:
+    #     neuron_list = []
+    if neuron_list:
+        neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+        intervention_type=args.intervention_type
+    else:
+        neuron_subset_name='baseline'
+        random_baseline=None
+        intervention_type=None
+
     run_if_necessary(
         args,
         model,
         tokenized_dataset,
         device,
         neuron_subset=neuron_list,
-        neuron_subset_name=f'{args.neuron_subset_name}{args.n_neurons}'
+        neuron_subset_name=neuron_subset_name,
+        intervention_type=intervention_type,
     )
     if random_baseline is not None and args.gate is None and args.post is None:
         run_if_necessary(
@@ -34,7 +44,8 @@ def run_with_baseline(
             tokenized_dataset,
             device,
             neuron_subset=random_baseline,
-            neuron_subset_name=f'{args.neuron_subset_name}{args.n_neurons}_baseline'
+            neuron_subset_name=f'{neuron_subset_name}_baseline',
+            intervention_type=intervention_type
         )
 
 def run_if_necessary(
@@ -43,7 +54,8 @@ def run_if_necessary(
     tokenized_dataset,
     device,
     neuron_subset,
-    neuron_subset_name=None
+    neuron_subset_name=None,
+    intervention_type=None,
 ):
     if not neuron_subset_name:
         neuron_subset_name = '_'.join([f'{l}.{n}' for l, n in neuron_subset])
@@ -53,11 +65,12 @@ def run_if_necessary(
         args.data_dir,
         args.output_dir,
         args.model,
-        args.token_dataset,
+        args.token_dataset.split('/')[-1],
         neuron_subset_name,
-        str(args.intervention_type)+'_'+str(args.intervention_param),
+        str(intervention_type)+'_'+str(args.intervention_param),
     )
 
+    print(neuron_subset_name)
     if not os.path.exists(save_path):
         run_intervention_experiment(
             args,
@@ -68,13 +81,16 @@ def run_if_necessary(
             neuron_subset_name,
             save_path=save_path,
         )
+    else:
+        print("already computed, skipping")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # general arguments
-    parser.add_argument('--work_dir')
-    parser.add_argument('--data_dir')
+    parser.add_argument('--work_dir', default='.')
+    parser.add_argument('--data_dir', default='.')
+    parser.add_argument('--wcos_dir', default='.')
     parser.add_argument(
         '--output_dir', default='intervention_results')
     parser.add_argument(
@@ -83,7 +99,7 @@ if __name__ == '__main__':
         help='Name of model from TransformerLens')
     parser.add_argument(
         '--token_dataset',
-        default='dolma_small',
+        default='neuroscope/datasets/dolma-small',
         help='Name of cached feature dataset')
     parser.add_argument(
         '--activation_location', default='mlp.hook_post',
@@ -118,8 +134,10 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--intervention_type', type=str, default=None,
-        help='Type of intervention to perform')
+        '--intervention_type',
+        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation"],
+        default="zero_ablation",
+    )
     parser.add_argument(
         '--intervention_param', type=float, default=None,
         help='Parameter for intervention type (eg, threshold or fixed activation)')
@@ -136,7 +154,7 @@ if __name__ == '__main__':
 
     device = args.device
 
-    model = HookedTransformer.from_pretrained(args.model, device=device)
+    model = HookedTransformer.from_pretrained(args.model, device=device, refactor_glu=True)
     #model.to(device)
     model.eval()
     torch.set_grad_enabled(False)
@@ -147,8 +165,12 @@ if __name__ == '__main__':
     if args.neuron_subset_name=='baseline':
         neuron_list = []
         random_baseline=None
+        subset=None
     else:
-        subset = float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons)
+        if (args.n_neurons is None) or (args.n_neurons=='None'):
+            subset = None
+        else:
+            subset = float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons)
         neuron_list, random_baseline = neuron_choice(
             args,
             category_key=NAME_TO_COMBO[args.neuron_subset_name],
@@ -161,5 +183,6 @@ if __name__ == '__main__':
         tokenized_dataset,
         device,
         neuron_list,
-        random_baseline
+        random_baseline,
+        subset=subset,
     )

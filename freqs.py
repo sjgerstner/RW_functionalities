@@ -13,10 +13,14 @@ from plotting import SHORT_TO_LONG, aligned_histograms, freq_sim_scatter
 from utils import COMBO_TO_NAME
 
 parser = ArgumentParser()
-parser.add_argument('--work_dir', default=None)
+parser.add_argument('--work_dir', default='.')
 parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424-hf_dolma-small')
-parser.add_argument('--wcos_dir', default='wcos_casestudies')
+parser.add_argument(
+    '--wcos_dir',
+    default='.',#'wcos_casestudies',
+)
 parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
+parser.add_argument('--refactor_glu', action='store_true')
 parser.add_argument('--log', action='store_true')
 parser.add_argument('--metric', default='summary_freq')#TODO support for other metrics
 parser.add_argument('--subexperiments', nargs='+', default=['all'])
@@ -61,7 +65,9 @@ if "category_plots" in subexps or "table" in subexps:#not os.path.exists(CATEGOR
     my_data = []
     for i,key in enumerate(COMBO_TO_NAME.keys()):
         #lists of (layer neuron) tuples
-        neuron_list, baseline_list = neuron_choice.neuron_choice(args, key)#TODO refactoring has introduced a bug here
+        neuron_list, baseline_list = neuron_choice.neuron_choice(args, key)
+        if neuron_list is None:#too few neurons in category
+            continue
         my_data.append([freq_tensor[index].item() for index in neuron_list])
         my_data.append([freq_tensor[index].item() for index in baseline_list])
 
@@ -83,9 +89,13 @@ if "category_plots" in subexps or "table" in subexps:#not os.path.exists(CATEGOR
         PICKLE_ALL = f'{PLOT_DIR}/{args.metric}_all.pickle'
         if not os.path.exists(PICKLE_ALL):
             #tensor of category by neuron
-            PATH = f"{args.work_dir}/{args.wcos_dir}/results/{args.model_name}"
-            with open(f"{PATH}/data.pickle", 'rb') as f:
-                data = pickle.load(f)
+            PATH = f"{args.work_dir}/{args.wcos_dir}/results/{args.model}"
+            DATA_PATH = f"{PATH}/data.pt"
+            if not os.path.exists(DATA_PATH):
+                DATA_PATH = f"{PATH}/refactored/data.pt"
+            data = torch.load(DATA_PATH)
+            # with open(f"{PATH}/data.pickle", 'rb') as f:
+            #     data = pickle.load(f)
             category_tensor = data['categories']#layer neuron
             #we have a tensor of frequencies (already above) a tensor of categories
             #later we want to choose subsets based on layer only (done above), category only,
@@ -100,7 +110,7 @@ if "category_plots" in subexps or "table" in subexps:#not os.path.exists(CATEGOR
             means = [np.mean(np.array(subset)) for subset in my_data]
             means = np.array(means).reshape((len(COMBO_TO_NAME),2))
             table = pd.DataFrame(
-                means, index=COMBO_TO_NAME, columns=["true", "baseline"]
+                means, index=COMBO_TO_NAME.values(), columns=["true", "baseline"]
             )
             table.to_pickle(PICKLE_MEANS)
         else:
@@ -109,7 +119,7 @@ if "category_plots" in subexps or "table" in subexps:#not os.path.exists(CATEGOR
         styler.to_latex(
             f'{PLOT_DIR}/{args.metric}.tex', label=f"tab:{args.metric}",
             caption="""
-            Activation frequencies by IO class.
+            Activation frequencies by RW class.
             The second column represents random neurons taken from the same layers.
             """,
         )

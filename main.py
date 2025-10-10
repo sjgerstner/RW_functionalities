@@ -24,7 +24,7 @@ EXPERIMENT_LIST = [
     "beta",
     "randomness", #compute 95 percent randomness regions (95 percent of 'mismatched' weight cosines are in this region)
     "categories", #categorize the neurons
-    "category_stats",#compute statistics of IO classes by layer
+    "category_stats",#compute statistics of RW classes by layer
     #"quartiles",#compute quartiles of cosine similarities (by layer)
     "plot_fine",#create fine-grained plot
     "plot_selected",
@@ -248,7 +248,7 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--work_dir')
+    parser.add_argument('--work_dir', default='.')
     parser.add_argument(
         '--refactor_glu',
         action='store_true',

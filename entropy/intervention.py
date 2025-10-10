@@ -1,5 +1,6 @@
 """
-Largely copied from Gurnee et al. 2024, Universal neurons
+Largely copied from Gurnee et al. 2024, Universal neurons:
+https://github.com/wesg52/universal-neurons
 
 MIT License
 
@@ -35,12 +36,13 @@ import argparse
 import numpy as np
 import pandas as pd
 from functools import partial
-from utils import get_model_family
 from torch.utils.data import DataLoader
 from transformer_lens import HookedTransformer
 import torch.nn.functional as F
 from transformer_lens.utils import lm_cross_entropy_loss
-from activations import get_correct_token_rank
+
+from entropy.activations import get_correct_token_rank
+from entropy.utils import get_model_family
 
 
 def quantize_neurons(activation_tensor, output_precision=8):

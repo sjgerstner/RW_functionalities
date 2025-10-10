@@ -1,5 +1,6 @@
 """
-Largely copied from Gurnee et al. 2024, Universal neurons
+Largely copied from Gurnee et al. 2024, Universal neurons:
+https://github.com/wesg52/universal-neurons
 
 MIT License
 
@@ -40,9 +41,10 @@ import torch.nn.functional as F
 from transformers import DataCollatorWithPadding
 from transformer_lens import HookedTransformer
 from transformer_lens.utils import lm_cross_entropy_loss
-from utils import get_model_family
-from activations import get_correct_token_rank
-from intervention import (
+
+from .utils import get_model_family
+from .activations import get_correct_token_rank
+from .intervention import (
     zero_ablation_hook,
     threshold_ablation_hook,
     relu_ablation_hook,
@@ -193,6 +195,8 @@ def run_intervention_experiment(
 
     if neuron_subset is None:
         neuron_subset = args.neuron_subset
+        # if neuron_subset is None:
+        #     return
 
     conditioning_values = {}
     hooks = []

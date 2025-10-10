@@ -1,3 +1,11 @@
+"""
+Modified from Geva et al. 2023, Dissecting recall:
+https://github.com/google-research/google-research/tree/master/dissecting_factual_predictions
+
+Copyright 2023 Google LLC.
+Licensed under the Apache License, Version 2.0 (the "License").
+"""
+
 from functools import partial
 from tqdm import tqdm
 
@@ -5,7 +13,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from intervention import make_hooks
+from entropy.intervention import make_hooks
 
 #%%
 #from the utils.py of Geva et al, Dissecting Recall
