@@ -22,9 +22,11 @@ def run_with_baseline(
     #     neuron_list = []
     if neuron_list:
         neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+        intervention_type=args.intervention_type
     else:
         neuron_subset_name='baseline'
         random_baseline=None
+        intervention_type=None
 
     run_if_necessary(
         args,
@@ -32,7 +34,8 @@ def run_with_baseline(
         tokenized_dataset,
         device,
         neuron_subset=neuron_list,
-        neuron_subset_name=neuron_subset_name
+        neuron_subset_name=neuron_subset_name,
+        intervention_type=intervention_type,
     )
     if random_baseline is not None and args.gate is None and args.post is None:
         run_if_necessary(
@@ -41,7 +44,8 @@ def run_with_baseline(
             tokenized_dataset,
             device,
             neuron_subset=random_baseline,
-            neuron_subset_name=f'{neuron_subset_name}_baseline'
+            neuron_subset_name=f'{neuron_subset_name}_baseline',
+            intervention_type=intervention_type
         )
 
 def run_if_necessary(
@@ -50,7 +54,8 @@ def run_if_necessary(
     tokenized_dataset,
     device,
     neuron_subset,
-    neuron_subset_name=None
+    neuron_subset_name=None,
+    intervention_type=None,
 ):
     if not neuron_subset_name:
         neuron_subset_name = '_'.join([f'{l}.{n}' for l, n in neuron_subset])
@@ -62,7 +67,7 @@ def run_if_necessary(
         args.model,
         args.token_dataset.split('/')[-1],
         neuron_subset_name,
-        str(args.intervention_type)+'_'+str(args.intervention_param),
+        str(intervention_type)+'_'+str(args.intervention_param),
     )
 
     print(neuron_subset_name)
