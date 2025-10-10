@@ -7,6 +7,8 @@ knowns/known_1000.json
 se/logitlens.csv
 se/hs_cache_OLMo-7B-0424-hf.pt
 #intervention_results/
+#for full anonymity:
+.gitmodules
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
