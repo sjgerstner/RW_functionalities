@@ -1,6 +1,7 @@
 #TODO save neuron choices to avoid recomputing
 
-import pickle
+from os.path import exists
+#import pickle
 import random
 import torch
 
@@ -42,17 +43,24 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
     """
     #category_index = CATEGORY_NAMES.index(category_name)
     random.seed(2512800)
-    path = f"{args.work_dir}/wcos_casestudies/results/{args.model}"
-    with open(f"{path}/data.pickle", 'rb') as f:
-        data = pickle.load(f)
+    path = f"{args.work_dir}/{args.wcos_dir}/results/{args.model}"
+    # with open(f"{path}/data.pickle", 'rb') as f:
+    #     data = pickle.load(f)
+    data_path = f"{path}/data.pt"
+    if not exists(data_path):
+        data_path = f"{path}/refactored/data.pt"
+    data = torch.load(data_path)
     neuron_tensor = torch.nonzero(is_in_category(data['categories'],category_key))
     neuron_list = [tuple(line) for line in neuron_tensor]
     if subset is not None:
         if isinstance(subset, float):
             assert 0<subset<=1
             subset = int(subset*len(neuron_list))
-        assert subset<=len(neuron_list)
-        neuron_list = random.sample(neuron_list, subset)
+        if subset<len(neuron_list):
+            neuron_list = random.sample(neuron_list, subset)
+        elif subset>len(neuron_list):
+            print(f"Warning: category {COMBO_TO_NAME[category_key]} only contains {len(neuron_list)} neurons.")
+            return None, None
     if baseline:
         #TODO adapt baseline to activation frequencies
         baseline_list = random_baseline(neuron_list, data['categories'], category_key)
@@ -62,7 +70,7 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
 def random_baseline(neuron_list, data_categories, category_key):
     """Generate a random list of neurons with the following requirements:
     - no overlap with neuron_list
-    - no overlap with the IO class that neuron_list is taken from
+    - no overlap with the RW class that neuron_list is taken from
     - from each layer take the same number of neurons as neuron_list has in that layer;
     if neuron_list contains more than half of all neurons of a given layer, just take all the others
     
@@ -96,7 +104,7 @@ def random_baseline(neuron_list, data_categories, category_key):
                 f"Warning: category {COMBO_TO_NAME[category_key]} covers more than half of neurons",
                 f"in layer {layer} ({number} of {d_mlp})"
             )
-        baseline_list.extend([(layer,neuron) for neuron in baseline_sublist])
+        baseline_list.extend([(layer,neuron.item()) for neuron in baseline_sublist])
     return baseline_list
 
 # def random_baseline_old(layer, category_index, data, other_neurons, d_mlp):

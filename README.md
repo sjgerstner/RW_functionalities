@@ -1,29 +1,29 @@
-# Software and data
-
-**September 25: The following description is outdated. We will update it within the next week.**
-
-## Warning
-
-In most of our code we used pickle.
-We later noticed we could have used torch.save() and torch.load() instead,
-which is more trustworthy and avoids trouble with different devices.
-We still submit the code with pickle for consistency with the data we saved.
-We plan to make it compatible with both in a later version.
-
-We do not submit any of the actual pickle data.
-So feel free to change your local version of the code.
+# Software and data for the RW functionalities paper (weakening neurons)
 
 ## Structure
 
-* ```TransformerLens``` (submodule): a fork of TransformerLens that supports OLMo.
-* ```neuroscope``` (submodule): Code and results for the activation-based neuron analyses in Section 6. See the separate repo for more information.
-* ```wcos_casestudies```: Code for most experiments
-  * ```utils.py``` and ```plotting.py``` contain helper functions
-  * ```main.py```: Run this to reproduce Section 5. There are options for each sub-experiment (see the argparse part of the code).
-  * ```casestudies.py```: If you open this in VS Code, you will be able to run it cell by cell like a Jupyter notebook. It first generates the data for Appendix E (IO classes vs. functional roles), then selects the neurons for the case studies of Section 6 and does the weight-based part of the case studies.
-  * ```selected_plot.py```: reproduce Figure 5 (selected layers of Llama).
-  * ```defplot.py```: reproduce Figure 2 (definition plot).
-* ```interactive.ipynb```: interactive vector visualisations of IO classes.
+* ```TransformerLens/``` (submodule): a fork of TransformerLens that supports OLMo.
+* ```neuroscope/``` (submodule): Code and results for activation-based neuron case studies. Contains the dataset ```neuroscope/datasets/dolma-small/```.
+* ```interactive.ipynb```: interactive vector visualisations of RW classes (may help to understand section 2.2 with the definitions of RW functionalities).
+* Statistics of RW functionalities (section 3 in the submission):
+  * Code is in the top-level directory:
+    * ```utils.py``` and ```plotting.py``` contain helper functions
+    * ```main.py```: Run this to reproduce the section. There are options for each sub-experiment (see the argparse part of the code).
+  * Results are in ```results/```.
+* Ablation experiments (section 4):
+  * attributes rate:
+    * main code in ```attributes/```
+    * Wikipedia data for subject-attribute mappings: code in ```wiki/``` and data in ```wiki_data/```
+    * data to run the model on: ```knowns/```
+    * machine-readable results in ```se/logitlens.pickle```
+    * plots in ```plots/ablations/``` (all the ```attributes.pdf``` files)
+  * other metrics (entropy etc.), incl. conditional ablations:
+    * bash script that runs all the modified models: ```entropy_interventions.sh```. It calls the code in ```entropy/```.
+    * machine-readable results in ```intervention_results/```
+    * plots in ```plots/ablations/``` (files named ```entropy.pdf``` etc.)
+* Activation frequencies (section 5):
+  * code in ```freqs.py```
+  * plots in ```plots/freq/```
 
 ## Steps to reproduce
 
@@ -32,42 +32,91 @@ So feel free to change your local version of the code.
 First, create your environment and install requirements:
 
 ```[bash]
-conda create -n wcos python==3.12.9
+conda create -n wcos --file environment.yml
 conda activate wcos
-pip install -r requirements.txt
 git submodule init --recursive
-cd TransformerLens
-pip install -e .
+pip install -e TransformerLens
+```
+
+The last line will change some of the package versions
+(no combination was perfectly compatible),
+but the behaviour is fine anyway.
+
+### Section 3 (RW functionalities by layer)
+
+```[bash]
+python main.py --refactor_glu
+```
+
+(see the argparse part of the code for more options)
+
+### Section 4 (Ablation experiments)
+
+#### Attributes rate
+
+##### Preparation (may be skipped)
+
+In this section we explain how to reproduce the data
+that we then use for the ablation experiment on attributes rate.
+You can skip this because we provide the resulting data.
+
+Get the online datasets:
+
+```[bash]
+cd knowns
+wget https://rome.baulab.info/data/dsets/known_1000.json
+cd ../wiki_data
+wget https://archive.org/download/enwiki-20211020/enwiki-20211020-pages-articles-multistream-index.txt.bz2
+wget https://archive.org/download/enwiki-20211020/enwiki-20211020-pages-articles-multistream.xml.bz2
 cd ..
 ```
 
-### Section 5 (IO functionalities by layer)
+Filter ```known_1000``` to the items known by OLMo-7B-0424 (the model of interest):
 
 ```[bash]
-cd wcos_casestudies
-python main.py --categories --category_stats --quartiles --plot_fine --plot_coarse --plot_quartiles --plot_all_medians --model all
+python wiki/knowns.py
 ```
 
-or any subset of these options / specific model names.
+Create a dataset of relevant Wikipedia paragraphs for each subject:
 
-### Section 6 (Case studies)
+```[bash]
+python wiki/wiki_preprocess.py
+python wiki/wiki_retrieve.py
+```
 
-#### Appendix E: IO classes vs. functional roles
+##### Main experiment
 
-For our case studies we limit the search space to prediction neurons,
-so we first need to find out which these are.
+```[bash]
+python -m attributes.enrichment --n_neurons 243 # we also did the same with 24
+python -m attributes.plotting
+```
 
-Open ```casestudies.py``` in VS Code.
-You will be able to run it cell by cell like a Jupyter Notebook.
+#### Entropy etc
 
-#### Choosing neurons
+Including conditional ablations.
 
-Continue running the same script.
+To run the interventions:
 
-#### Weight-based part of the case studies
+```[bash]
+bash entropy_interventions.sh
+```
 
-Final cell of the same script.
+The above command will run up to 5 different ablations in parallel on different GPUs.
+If you don't have that many GPUs available (but more time),
+you can call the python commands by hand one by one.
+Each ablation run needs approximately 7-8 GPU hours,
+and there are 23 different ablations to run.
 
-#### Activation-based part
+To get the plots:
 
-See submodule ```neuroscope```.
+```[bash]
+python -m entropy.compare --experiment_name 24 --neurons strengthening24 "conditional strengthening24" "proportional change24" "conditional weakening24" weakening24
+python -m entropy.compare --experiment_name 243 --neurons "conditional strengthening243" "proportional change243" "conditional weakening243" weakening
+python -m entropy.compare --experiment_name weakening_complete --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post-
+```
+
+### Section 5 (Activation frequencies)
+
+```[bash]
+python freqs.py --log
+```

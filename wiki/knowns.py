@@ -9,7 +9,7 @@ from transformer_lens import HookedTransformer
 
 parser = ArgumentParser()
 parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
-parser.add_argument('--data_dir')
+parser.add_argument('--data_dir', default='knowns')
 args = parser.parse_args()
 
 # Get CounterFact data for GPT2-xl, from the ROME repository.
