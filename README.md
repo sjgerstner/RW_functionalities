@@ -110,8 +110,8 @@ and there are 23 different ablations to run.
 To get the plots:
 
 ```[bash]
-python -m entropy.compare --experiment_name 24 --neurons strengthening24 conditional_strengthening24 proportional_change24 conditional_weakening24 weakening24
-python -m entropy.compare --experiment_name 243 --neurons conditional_strengthening243 proportional_change243 conditional_weakening243 weakening243
+python -m entropy.compare --experiment_name 24 --neurons strengthening24 "conditional strengthening24" "proportional change24" "conditional weakening24" weakening24
+python -m entropy.compare --experiment_name 243 --neurons "conditional strengthening243" "proportional change243" "conditional weakening243" weakening
 python -m entropy.compare --experiment_name weakening_complete --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post-
 ```
 
