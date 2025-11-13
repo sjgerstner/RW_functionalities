@@ -9,6 +9,27 @@ from entropy.entropy_intervention import run_intervention_experiment
 from neuron_choice import neuron_choice
 from utils import NAME_TO_COMBO
 
+def get_mean_values(args):
+    summary_dict = torch.load(args.means_path)
+    relevant_gate_signs=[args.gate] if args.gate else ['+','-']
+    relevant_post_signs=[args.post] if args.post and args.gate else ['+','-']
+    relevant_cases_post = [
+        f'gate{gate_sign}_post{post_sign}'
+        for gate_sign in relevant_gate_signs for post_sign in relevant_post_signs
+    ]
+    relevant_cases_in = [
+        post_string.replace('post', 'in') if post_string.startswith('gate+')
+        else post_string.replace('post+', 'in-').replace('post-', 'in+')
+        for post_string in relevant_cases_post
+    ]
+    mean_values = torch.sum(torch.stack([
+            summary_dict[case_key,'freq']*summary_dict[case_key, 'hook_post', 'mean']
+            for case_key in relevant_cases_in
+        ], dim=0), dim=0) / torch.sum(torch.stack([
+            summary_dict[case_key,'freq'] for case_key in relevant_cases_in
+        ], dim=0), dim=0)
+    return mean_values
+
 def run_with_baseline(
     args,
     model,
@@ -27,6 +48,10 @@ def run_with_baseline(
         neuron_subset_name='baseline'
         random_baseline=None
         intervention_type=None
+    if intervention_type=='mean_ablation':
+        mean_values = get_mean_values(args)
+    else:
+        mean_values = None
 
     run_if_necessary(
         args,
@@ -36,6 +61,7 @@ def run_with_baseline(
         neuron_subset=neuron_list,
         neuron_subset_name=neuron_subset_name,
         intervention_type=intervention_type,
+        mean_values=mean_values,
     )
     if random_baseline is not None and args.gate is None and args.post is None:
         run_if_necessary(
@@ -45,7 +71,8 @@ def run_with_baseline(
             device,
             neuron_subset=random_baseline,
             neuron_subset_name=f'{neuron_subset_name}_baseline',
-            intervention_type=intervention_type
+            intervention_type=intervention_type,
+            mean_values=mean_values,
         )
 
 def run_if_necessary(
@@ -56,6 +83,7 @@ def run_if_necessary(
     neuron_subset,
     neuron_subset_name=None,
     intervention_type=None,
+    mean_values:torch.Tensor|None=None,
 ):
     if not neuron_subset_name:
         neuron_subset_name = '_'.join([f'{l}.{n}' for l, n in neuron_subset])
@@ -80,6 +108,7 @@ def run_if_necessary(
             neuron_subset,
             neuron_subset_name,
             save_path=save_path,
+            mean_values=mean_values,
         )
     else:
         print("already computed, skipping")
@@ -93,6 +122,7 @@ if __name__ == '__main__':
     parser.add_argument('--wcos_dir', default='.')
     parser.add_argument(
         '--output_dir', default='intervention_results')
+    parser.add_argument('--means_path', default='neuroscope/results/7B_new/summary_refactored.pt')
     parser.add_argument(
         '--model',
         default='allenai/OLMo-7B-0424-hf',
