@@ -202,6 +202,8 @@ def run_intervention_experiment(
         #     return
     if args.intervention_type!='mean_ablation':
         mean_values = torch.zeros((model.cfg.n_layers, model.cfg.d_mlp))
+    else:
+        assert mean_values is not None
     conditioning_values = {}
     hooks = []
     for lix, nix in neuron_subset:
