@@ -26,6 +26,8 @@ sns.set_theme(#context="notebook",
 palette_ = sns.color_palette("Set1")
 palette = palette_[2:5] + palette_[7:]
 
+#dashes = [(5,0), (5,5), (2,5)] #solid, dashed, dotted
+
 parser = ArgumentParser()
 # parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
 # parser.add_argument('--topk', default=50)
@@ -61,7 +63,8 @@ for name in all_subset_names:
     ax = sns.lineplot(data=data,
                     x="layer", y="top_k_preds_in_context",#we use zero-based layer indexing
                     hue="neuron_subset_name",
-                    dashes=True,
+                    style="neuron_subset_name",
+                    #dashes=dashes,
                     linewidth=2,
                     markers=False,
                     palette=palette[:3],
