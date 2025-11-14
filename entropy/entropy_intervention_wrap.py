@@ -23,7 +23,7 @@ def get_mean_values(args):
         for post_string in relevant_cases_post
     ]
     mean_values = torch.sum(torch.stack([
-            summary_dict[case_key,'freq']*summary_dict[case_key, 'hook_post', 'mean']
+            summary_dict[(case_key,'freq')]*summary_dict[(case_key, 'hook_post', 'sum')]
             for case_key in relevant_cases_in
         ], dim=0), dim=0) / torch.sum(torch.stack([
             summary_dict[case_key,'freq'] for case_key in relevant_cases_in
@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--intervention_type',
-        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation"],
+        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation", "mean_ablation"],
         default="zero_ablation",
     )
     parser.add_argument(

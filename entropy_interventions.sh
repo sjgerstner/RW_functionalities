@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euox pipefail
 
-intervention_type={$1:-zero_ablation}
+intervention_type=${1:-zero_ablation}
 
 names=("strengthening" "conditional strengthening" "proportional change" "conditional weakening" "weakening")
 signs=("+" "-")
