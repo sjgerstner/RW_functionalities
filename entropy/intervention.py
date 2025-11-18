@@ -1,4 +1,9 @@
 """
+We use this only for the functions:
+    threshold_ablation_hook,
+    relu_ablation_hook,
+    fixed_activation_hook.
+
 Largely copied from Gurnee et al. 2024, Universal neurons:
 https://github.com/wesg52/universal-neurons
 

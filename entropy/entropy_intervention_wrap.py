@@ -23,7 +23,7 @@ def get_mean_values(args):
         for post_string in relevant_cases_post
     ]
     mean_values = torch.sum(torch.stack([
-            summary_dict[(case_key,'freq')]*summary_dict[(case_key, 'hook_post', 'sum')]
+            summary_dict[(case_key,'freq')]*torch.nan_to_num(summary_dict[(case_key, 'hook_post', 'sum')])
             for case_key in relevant_cases_in
         ], dim=0), dim=0) / torch.sum(torch.stack([
             summary_dict[case_key,'freq'] for case_key in relevant_cases_in
