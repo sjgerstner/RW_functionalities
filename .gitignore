@@ -8,6 +8,7 @@ se/logitlens.csv
 se/hs_cache_OLMo-7B-0424-hf.pt
 intervention_results/
 .vscode/
+adapt_df.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
