@@ -133,6 +133,8 @@ def ablation_hook(activation, hook, args, neuron=None, mask=None, mean_value:flo
     return activation
 
 def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:float=0.0):
+    if conditioning_value is None:
+        conditioning_value = {}
     out = []
 
     if args.gate is not None:

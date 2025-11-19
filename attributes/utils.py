@@ -125,7 +125,8 @@ def record_logitlens(args, knowns_df, model, neuron_subset=None, neuron_subset_n
                     "neuron_subset_name": neuron_subset_name,
                     "top_k_preds_str": logitlens(
                         model, cache[position,subject_repr_layer,:], args.topk
-                    )
+                    ),
+                    "intervention_type": args.intervention_type,
                 })
     tmp = pd.DataFrame.from_records(records)
     return tmp

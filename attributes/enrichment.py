@@ -51,7 +51,7 @@ if __name__=="__main__":
         choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation", "mean_ablation"],
         default="zero_ablation",
     )
-    parser.add_argument('--activation_location', default='mlp.hook_pre')
+    parser.add_argument('--activation_location', default='mlp.hook_post')
     parser.add_argument(
         '--n_neurons', default=None,
         help="""(None or float or int, default None): how many neurons to choose from the category.
@@ -67,6 +67,14 @@ if __name__=="__main__":
     parser.add_argument(
         '--constant_class', default='weakening',
         help="The class from which to ablate n_neurons"
+    )
+    parser.add_argument(
+        '--gate', default=None,
+        help="ablate only when x_gate has this sign ('+' or '-')"
+    )
+    parser.add_argument(
+        '--post', default=None,
+        help="ablate only when activation*cos(w_gate,w_in) has this sign ('+' or '-')"
     )
     parser.add_argument(
         '--subsets',
@@ -146,6 +154,7 @@ if __name__=="__main__":
                 "subject_tok": subject_tok,
                 "subject_tok_str": str(subject_tok_str),
                 "top_k_preds_str": model.to_str_tokens(ind[:args.topk]),
+                "intervention_type": None,
             }
             records.append(record)
         tmp = pd.DataFrame.from_records(records)
@@ -173,8 +182,8 @@ if __name__=="__main__":
     for subset_name in args.subsets:
         clear_subset_name = f'{subset_name}{N_NEURONS}' if N_NEURONS else subset_name
         baseline_name=f'{clear_subset_name}_baseline'
-        test1 = (tmp["neuron_subset_name"]!=clear_subset_name).all()
-        test2 = (tmp["neuron_subset_name"]!=baseline_name).all()
+        test1 = ((tmp["neuron_subset_name"]!=clear_subset_name) | (tmp["intervention_type"]!=args.intervention_type)).all()
+        test2 = ((tmp["neuron_subset_name"]!=baseline_name) | (tmp["intervention_type"]!=args.intervention_type)).all()
         if test1 or test2:
             #TODO number of neurons to ablate from this class
             #create neuron subsets

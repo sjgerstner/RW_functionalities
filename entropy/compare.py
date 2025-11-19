@@ -8,7 +8,7 @@ import torch
 from plotting import aligned_histograms
 
 #%%
-def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation'):
+def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation'):
     #print('loading data...')
     baseline = torch.load(
         f'{data_path}/baseline/None_None/{metric}.pt',
@@ -23,6 +23,24 @@ def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_
         diff = baseline / ablated
     else:
         diff = baseline - ablated
+    return diff
+
+def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation'):
+    # #print('loading data...')
+    # baseline = torch.load(
+    #     f'{data_path}/baseline/None_None/{metric}.pt',
+    #     weights_only=True
+    # )
+    # ablated = torch.load(
+    #     f'{data_path}/{neuron_subset_name}/{intervention_type}_None/{metric}.pt',
+    #     weights_only=True
+    # )#sample pos
+    # #print('computing difference...')
+    # if metric=='scale':
+    #     diff = baseline / ablated
+    # else:
+    #     diff = baseline - ablated
+    diff = unflattened_data(data_path, metric, neuron_subset_name, intervention_type)
     #print('flattening and removing zeros...')
     diff_flattened = diff.flatten()
     #remove zeros, corresponding to padding
