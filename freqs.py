@@ -24,7 +24,7 @@ parser.add_argument('--refactor_glu', action='store_true')
 parser.add_argument('--log', action='store_true')
 parser.add_argument('--metric', default='summary_freq')#TODO support for other metrics
 parser.add_argument('--subexperiments', nargs='+', default=['all'])
-parser.add_argument('--layer_list', nargs='+', default=[0, 15, 31])
+parser.add_argument('--layer_list', nargs='+', default=[0, 15, 31], type=int)
 args = parser.parse_args()
 
 if 'all' in args.subexperiments:

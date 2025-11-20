@@ -365,7 +365,10 @@ def freq_sim_scatter(
     fig.set_figwidth(4*arrangement[1])
     fig.set_figheight(4*arrangement[0])
 
-    axs_list = axes.ravel().tolist()
+    if arrangement==(1,1):
+        axs_list = [axes]
+    else:
+        axs_list = axes.ravel().tolist()
     cbar_ax = fig.add_axes([1, .03, .02, .91])
     for i, layer in enumerate(layer_list):
         data = data_by_layer[layer]
