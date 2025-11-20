@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euox pipefail
 
+intervention_type=${1:-zero_ablation}
+
 names=("strengthening" "conditional strengthening" "proportional change" "conditional weakening" "weakening")
 signs=("+" "-")
 
@@ -18,12 +20,14 @@ for n_neurons in {24,243}; do
             --neuron_subset_name "$neuron_subset_name" \
             --n_neurons $n_neurons \
             --batch_size 4 \
-            --device cuda:$i &
+            --device cuda:$i \
+            --intervention_type $intervention_type &
     done
     wait
 done
 wait
 
+#conditional ablations
 for gate in "${!signs[@]}"; do
     for post in "${!signs[@]}"; do
         python -m entropy.entropy_intervention_wrap \
@@ -31,7 +35,8 @@ for gate in "${!signs[@]}"; do
             --gate "${signs[$gate]}" \
             --post "${signs[$post]}" \
             --batch_size 4 \
-            --device "cuda:$((2 * $gate + $post))" &
+            --device "cuda:$((2 * $gate + $post))" \
+            --intervention_type $intervention_type &
     done
 done
 wait
