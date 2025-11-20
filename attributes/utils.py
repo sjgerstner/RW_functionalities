@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from entropy.intervention import make_hooks
+from entropy.entropy_intervention import make_hooks
 
 #%%
 #from the utils.py of Geva et al, Dissecting Recall
@@ -53,11 +53,14 @@ def find_token_range(tokenizer, token_array, substring):
 #     for layer in layer_list:
 #         hooks += make_hooks(args, layer)
 #     return hooks
-def make_neuron_hooks(args, neuron_list):
+def make_neuron_hooks(args, neuron_list, mean_values:torch.Tensor|None=None):
     hooks = []
     if neuron_list is not None:
         for layer,neuron in neuron_list:
-            hooks.extend(make_hooks(args, layer, neuron))
+            hooks.extend(make_hooks(
+                args, layer, neuron,
+                mean_value=mean_values[layer,neuron].item() if mean_values is not None else 0,
+            ))
     return hooks
 
 def caching_hook(res, hook, cache):
@@ -72,7 +75,7 @@ def make_caching_hooks(n_layers, cache):
 # %%
 # inspired by the notebook,
 # extended to arbitrary neuron subsets
-def record_logitlens(args, knowns_df, model, neuron_subset=None, neuron_subset_name=None):
+def record_logitlens(args, knowns_df, model, neuron_subset=None, neuron_subset_name=None, mean_values=None):
     """
     Inputs:
         knowns_df: a pandas dataframe of factual recall prompts
@@ -107,7 +110,7 @@ def record_logitlens(args, knowns_df, model, neuron_subset=None, neuron_subset_n
                 inp[:position+1],
                 return_type=None,
                 fwd_hooks=make_neuron_hooks(
-                    args, neuron_subset
+                    args, neuron_subset, mean_values,
                 ) + make_caching_hooks(
                         model.cfg.n_layers, cache
                     ),
@@ -122,7 +125,8 @@ def record_logitlens(args, knowns_df, model, neuron_subset=None, neuron_subset_n
                     "neuron_subset_name": neuron_subset_name,
                     "top_k_preds_str": logitlens(
                         model, cache[position,subject_repr_layer,:], args.topk
-                    )
+                    ),
+                    "intervention_type": args.intervention_type,
                 })
     tmp = pd.DataFrame.from_records(records)
     return tmp

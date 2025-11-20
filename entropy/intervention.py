@@ -1,4 +1,9 @@
 """
+We use this only for the functions:
+    threshold_ablation_hook,
+    relu_ablation_hook,
+    fixed_activation_hook.
+
 Largely copied from Gurnee et al. 2024, Universal neurons:
 https://github.com/wesg52/universal-neurons
 
@@ -60,8 +65,9 @@ def quantize_neurons(activation_tensor, output_precision=8):
 #     return activations
 
 def zero_ablation_hook(activations, hook, neuron=None, mask=None):
+    """Not quite necessary anymore, can use fixed_activation_hook instead"""
     if mask is None:
-        mask = torch.ones(activations.shape[:-1], dtype=bool)
+        mask = torch.ones(size=activations.shape[:-1], dtype=torch.bool)
     if neuron is not None:
         activations[:,:, neuron][mask] = 0
     else:
@@ -82,10 +88,17 @@ def relu_ablation_hook(activations, hook, neuron):
     return activations
 
 
-def fixed_activation_hook(activations, hook, neuron, fixed_act=0):
-    activations[:, :, neuron] = fixed_act
+# def fixed_activation_hook(activations, hook, neuron, fixed_act=0):
+#     activations[:, :, neuron] = fixed_act
+#     return activations
+def fixed_activation_hook(activations, hook, neuron=None, fixed_act:float=0.0, mask=None):
+    if mask is None:
+        mask = torch.ones(size=activations.shape[:-1], dtype=torch.bool)
+    if neuron is not None:
+        activations[:,:, neuron][mask] = fixed_act
+    else:
+        activations[:][mask] = fixed_act
     return activations
-
 
 def make_hooks(args, layer, neuron=None):
     if args.intervention_type == 'zero_ablation':

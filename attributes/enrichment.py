@@ -33,12 +33,14 @@ from attributes.utils import (
 )
 from neuron_choice import neuron_choice
 from utils import NAME_TO_COMBO
+from entropy.entropy_intervention_wrap import get_mean_values
 
 if __name__=="__main__":
     parser = ArgumentParser()
     parser.add_argument('--work_dir', default='.')
     parser.add_argument('--wcos_dir', default='.')
     parser.add_argument('--wiki_dir', default='wiki_data')
+    parser.add_argument('--means_path', default='neuroscope/results/7B_new/summary_refactored.pt')
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     #parser.add_argument('--subject_repr_layer', default=40)
     #parser.add_argument('--num_block_layers', default=10)
@@ -46,10 +48,10 @@ if __name__=="__main__":
     parser.add_argument('--topk', default=50)
     parser.add_argument(
         '--intervention_type',
-        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation"],
+        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation", "mean_ablation"],
         default="zero_ablation",
     )
-    parser.add_argument('--activation_location', default='mlp.hook_pre')
+    parser.add_argument('--activation_location', default='mlp.hook_post')
     parser.add_argument(
         '--n_neurons', default=None,
         help="""(None or float or int, default None): how many neurons to choose from the category.
@@ -65,6 +67,14 @@ if __name__=="__main__":
     parser.add_argument(
         '--constant_class', default='weakening',
         help="The class from which to ablate n_neurons"
+    )
+    parser.add_argument(
+        '--gate', default=None,
+        help="ablate only when x_gate has this sign ('+' or '-')"
+    )
+    parser.add_argument(
+        '--post', default=None,
+        help="ablate only when activation*cos(w_gate,w_in) has this sign ('+' or '-')"
     )
     parser.add_argument(
         '--subsets',
@@ -86,6 +96,13 @@ if __name__=="__main__":
     nltk.download('stopwords')
     stopwords0_ = stopwords.words('english')
     stopwords0_ = {word: "" for word in stopwords0_}
+
+    # %%
+    #get mean activations for each neuron if we're using them later
+    if args.intervention_type=='mean_ablation':
+        mean_values = get_mean_values(args)
+    else:
+        mean_values = None
 
     # %%
     model = HookedTransformer.from_pretrained(args.model)
@@ -137,6 +154,7 @@ if __name__=="__main__":
                 "subject_tok": subject_tok,
                 "subject_tok_str": str(subject_tok_str),
                 "top_k_preds_str": model.to_str_tokens(ind[:args.topk]),
+                "intervention_type": None,
             }
             records.append(record)
         tmp = pd.DataFrame.from_records(records)
@@ -164,8 +182,8 @@ if __name__=="__main__":
     for subset_name in args.subsets:
         clear_subset_name = f'{subset_name}{N_NEURONS}' if N_NEURONS else subset_name
         baseline_name=f'{clear_subset_name}_baseline'
-        test1 = (tmp["neuron_subset_name"]!=clear_subset_name).all()
-        test2 = (tmp["neuron_subset_name"]!=baseline_name).all()
+        test1 = ((tmp["neuron_subset_name"]!=clear_subset_name) | (tmp["intervention_type"]!=args.intervention_type)).all()
+        test2 = ((tmp["neuron_subset_name"]!=baseline_name) | (tmp["intervention_type"]!=args.intervention_type)).all()
         if test1 or test2:
             #TODO number of neurons to ablate from this class
             #create neuron subsets
@@ -178,7 +196,8 @@ if __name__=="__main__":
             if test1:
                 nice_df = record_logitlens(
                     args, knowns_df, model,
-                    neuron_subset=nice_subset, neuron_subset_name=clear_subset_name
+                    neuron_subset=nice_subset, neuron_subset_name=clear_subset_name,
+                    mean_values = mean_values,
                 )
                 tmp = pd.concat([tmp, nice_df], ignore_index=True)
                 tmp.to_pickle(DF_PATH)
@@ -186,7 +205,8 @@ if __name__=="__main__":
             if test2:
                 random_baseline_df = record_logitlens(
                     args, knowns_df, model,
-                    neuron_subset=random_subset, neuron_subset_name=baseline_name
+                    neuron_subset=random_subset, neuron_subset_name=baseline_name,
+                    mean_values = mean_values,
                 )
                 tmp = pd.concat([tmp, random_baseline_df], ignore_index=True)
                 tmp.to_pickle(DF_PATH)
