@@ -71,12 +71,20 @@ def store_conditioning_hook(activation, hook, conditioning_values, neuron=None, 
         conditioning_values[hook.name] = activation.clone()
 
 
-def conditional_ablation_hook(activation, hook, args, conditioning_value, neuron=None, mean_value:float=0.0):
+def conditional_ablation_hook(
+    activation:torch.Tensor,
+    hook,
+    args,
+    conditioning_value:dict[str, torch.Tensor],
+    neuron=None,
+    mean_value:float=0.0,
+    positions:torch.Tensor|None=None
+):
     """Ablate based on conditioning activation"""
     hook_loc = '.'.join(hook.name.split('.')[:-1])
     gate_loc = hook_loc+'.hook_pre'
     post_loc = hook_loc+'.hook_post'
-    condition = None
+    condition = torch.ones(activation.shape[:-1], dtype=torch.bool, device=activation.device)
     if gate_loc in conditioning_value:
         if args.gate=='+':
             condition = conditioning_value[gate_loc]>0
@@ -85,14 +93,19 @@ def conditional_ablation_hook(activation, hook, args, conditioning_value, neuron
         else:
             raise NotImplementedError("argument 'gate' has to be + or -")
     if post_loc in conditioning_value:
-        if condition is None:
-            condition = torch.ones_like(conditioning_value[post_loc])
+        # if condition is None:
+        #     condition = torch.ones_like(conditioning_value[post_loc])
         if args.post=='+':
             condition = torch.logical_and(condition, conditioning_value[post_loc]>0)
         elif args.post=='-':
             condition = torch.logical_and(condition, conditioning_value[post_loc]<0)
         else:
             raise NotImplementedError("argument 'post' has to be + or -")
+    #optionally, ablate only at given positions
+    if positions is not None:
+        position_mask = torch.zeros(activation.shape[:-1],dtype=torch.bool, device=activation.device)
+        position_mask[:,positions]=True
+        condition = torch.logical_and(condition, position_mask)
     activation = ablation_hook(activation, hook, args, neuron=neuron, mask=condition, mean_value=mean_value)
     return activation
 
@@ -132,7 +145,7 @@ def ablation_hook(activation, hook, args, neuron=None, mask=None, mean_value:flo
             f'Unknown intervention type: {args.intervention_type}')
     return activation
 
-def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:float=0.0):
+def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:float=0.0, positions:torch.Tensor|None=None):
     if conditioning_value is None:
         conditioning_value = {}
     out = []
@@ -153,33 +166,11 @@ def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:
         )
         out.append((hook_loc, hook_fn))
 
-    # if args.intervention_type == 'zero_ablation':
-    #     hook_fn = partial(zero_ablation_hook, neuron=neuron, args=args)
-    # elif args.intervention_type == 'threshold_ablation':
-    #     hook_fn = partial(
-    #         threshold_ablation_hook,
-    #         neuron=neuron,
-    #         threshold=args.intervention_param)
-    # elif args.intervention_type == 'fixed_activation':
-    #     hook_fn = partial(
-    #         fixed_activation_hook,
-    #         neuron=neuron,
-    #         fixed_act=args.intervention_param)
-    # elif args.intervention_type == 'relu_ablation':
-    #     hook_fn = partial(relu_ablation_hook, neuron=neuron)
-
-    # elif args.intervention_type == 'multiply_activation':
-    #     hook_fn = partial(
-    #         multiply_activation_hook,
-    #         neuron=neuron,
-    #         multiplier=args.intervention_param)
-    # else:
-    #     raise ValueError(
-    #         f'Unknown intervention type: {args.intervention_type}')
     hook_fn = partial(
         conditional_ablation_hook,
         conditioning_value=conditioning_value,
-        args=args, neuron=neuron, mean_value=mean_value)
+        args=args, neuron=neuron, mean_value=mean_value,
+        positions=positions)
 
     hook_loc = f'blocks.{layer}.{args.activation_location}'
     out.append((hook_loc, hook_fn))
