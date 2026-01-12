@@ -261,11 +261,13 @@ def randomness_regions(mlp_weights, p=0.05):
                 where the 2 represents low and high quantiles (floats)
     """
     assert 0<=p<=1
-    return {
-        "gatelin": randomness_region(mlp_weights["W_gate"], mlp_weights["W_in"], p, absolute=True),
-        "gateout": randomness_region(mlp_weights["W_gate"], mlp_weights["W_out"], p),
+    answer = {
         "linout": randomness_region(mlp_weights["W_in"], mlp_weights["W_out"], p),
     }
+    if "W_gate" in mlp_weights:
+        answer["gatelin"] = randomness_region(mlp_weights["W_gate"], mlp_weights["W_in"], p, absolute=True)
+        answer["gateout"] = randomness_region(mlp_weights["W_gate"], mlp_weights["W_out"], p)
+    return answer
 
 def beta_randomness_region(d, p=0.05):
     """Returns a symmetrical randomness region
