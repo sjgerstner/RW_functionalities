@@ -178,7 +178,7 @@ def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
 
 def _make_plots(args, data, model_name, path):
     """make plots"""
-    layers = data['gatelin'].shape[0]
+    layers = data['linout'].shape[0]
     #fine-grained / cosines
     if "plot_fine" in args.experiments:# and not os.path.exists(f"{path}/fine.pdf"):
         ncols = 4
