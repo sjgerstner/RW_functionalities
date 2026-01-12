@@ -74,29 +74,32 @@ def _load_model_data(model_name, cache_dir=None, checkpoint_value=None, refactor
             **model_kwargs,
         )
 
+    out_dict = {}
     #new shape: layer neuron model_dim
-    W_gate = einops.rearrange(model.W_gate.detach(), 'l d n -> l n d').to(DEVICE)
-    W_in = einops.rearrange(model.W_in.detach(), 'l d n -> l n d').to(DEVICE)
-    W_out = model.W_out.detach().to(DEVICE) #already has the shape we want
+    if model.W_gate is not None:
+        out_dict["W_gate"] = einops.rearrange(model.W_gate.detach(), 'l d n -> l n d').to(DEVICE)
+    out_dict["W_in"] = einops.rearrange(model.W_in.detach(), 'l d n -> l n d').to(DEVICE)
+    out_dict["W_out"] = model.W_out.detach().to(DEVICE) #already has the shape we want
     #sanity check,comment out
     #print(W_gate.shape, W_in.shape, W_out.shape)#should all be the same
 
-    d_model = model.cfg.d_model
+    out_dict["d_model"] = model.cfg.d_model
 
     del model
     gc.collect()
     torch.cuda.empty_cache()
 
-    return {"W_gate":W_gate, "W_in":W_in, "W_out":W_out, "d_model":d_model}
+    return out_dict
 
 def cosines(mlp_weights):
     """Compute weight cosines within each neuron of the given model
     and return result as a dict of three tensors (gatelin, linout, gateout),
     each of which is of shape (layer neuron)."""
-    gatelin = utils.cos(mlp_weights["W_gate"], mlp_weights["W_in"]).cpu() #don't overload the gpu
-    linout = utils.cos(mlp_weights["W_in"], mlp_weights["W_out"]).cpu()
-    gateout = utils.cos(mlp_weights["W_gate"], mlp_weights["W_out"]).cpu()
-    data = {"gatelin":gatelin, "linout":linout, "gateout":gateout, "d_model":mlp_weights["d_model"]}
+    data = {"d_model":mlp_weights["d_model"]}
+    data["linout"] = utils.cos(mlp_weights["W_in"], mlp_weights["W_out"]).cpu()
+    if "W_gate" in mlp_weights:
+        data["gatelin"] = utils.cos(mlp_weights["W_gate"], mlp_weights["W_in"]).cpu() #don't overload the gpu
+        data["gateout"] = utils.cos(mlp_weights["W_gate"], mlp_weights["W_out"]).cpu()
     return data
 
 def _load_data_if_exists(path):
@@ -169,15 +172,6 @@ def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
     if "category_stats" in args.experiments:# and 'category_stats' not in data:
         print("category statistics")
         data['category_stats'] = utils.layerwise_count(data['categories'])
-    # if "quartiles" in args.experiments and 'quartiles' not in data:
-    #     print("quartiles")
-    #     q = torch.tensor([0,.25,.5,.75,1])
-    #     data['gatelin_quartiles'] = torch.quantile(data['gatelin'], q, dim=1)
-    #     data['gateout_quartiles'] = torch.quantile(data['gateout'], q, dim=1)
-    #     data['linout_quartiles'] = torch.quantile(data['linout'], q, dim=1)
-    #save results:
-    # for key in data:
-    #     data[key] = data[key].cpu()
     torch.save(data, f"{path}/data.pt")
     return data
 
