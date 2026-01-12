@@ -296,228 +296,91 @@ def _approx(x, threshold=.5):
         return ans.item()
     return ans
 
-def compute_category(linout, gateout, gatelin, threshold=.5):
+def compute_category(data, threshold=.5, device=None):
     """Computes the category of the given neurons,
     in the triple format of COMBO_TO_NAME.
     If args are floats: returns a triple
     If args are tensors (of shape (layer,neuron)): Returns tensor of shape (layer, neuron, 3)
     """
-    approx_linout = _approx(linout, threshold)
-    approx_gateout = _approx(gateout, threshold)
-    typical = torch.where(_approx(gatelin, threshold)==approx_linout*approx_gateout, 1, 0)
-    typical = torch.where((approx_linout==0) & (approx_gateout==0), 1, typical)
-    answer = (approx_linout, torch.abs(approx_gateout), typical)
-    if isinstance(linout, torch.Tensor):
-        return torch.stack(answer, dim=-1)
-    return answer
+    if device:
+        moved_data = {key:value.to(device) for key,value in data.items()}
+        data = moved_data
+    approx_linout = _approx(data["linout"], threshold)
+    if "gateout" in data:
+        approx_gateout = _approx(data["gateout"], threshold)
+        typical = torch.where(_approx(data["gatelin"], threshold)==approx_linout*approx_gateout, 1, 0)
+        typical = torch.where((approx_linout==0) & (approx_gateout==0), 1, typical)
+        answer = (approx_linout, torch.abs(approx_gateout), typical)
+        if isinstance(data["linout"], torch.Tensor):
+            return torch.stack(answer, dim=-1)
+        return answer
+    return approx_linout
 
-def count_categories(indices, gatelin, gateout, linout, threshold=.5):
-    """
-    Use this only for a small list of indices.
-    To count categories on the whole model, use count_categories_all().
-    If you have already done categories(),
-    read everything off from the output tensor of that function.
-    """
-    # d = 0
-    # cd = 0
-    # oo = 0
-    # pc = 0
-    # ce = 0
-    # e = 0
-    # other_d = 0
-    # other_cd = 0
-    # other_pc = 0
-    # other_ce = 0
-    # other_e = 0
-    answer = {key:0 for key in COMBO_TO_NAME}
+#the functions count_categories and category_lists are not used anymore
+# def count_categories(indices, gatelin, gateout, linout, threshold=.5):
+#     """
+#     Use this only for a small list of indices.
+#     To count categories on the whole model, use count_categories_all().
+#     If you have already done categories(),
+#     read everything off from the output tensor of that function.
+#     """
+#     answer = {key:0 for key in COMBO_TO_NAME}
 
-    for l,n in indices:
-        category = compute_category(linout[l][n], gateout[l][n], gatelin[l][n], threshold)
-        answer[category] +=1
-    return answer
-    #     if linout[l][n]<-threshold:
-    #         if (gateout[l][n]<-threshold) or (gateout[l][n]>threshold):
-    #             if torch.copysign(gatelin[l][n], gateout[l][n])<-threshold:
-    #                 d+=1
-    #             else:
-    #                 other_d+=1
-    #         else:
-    #             if gatelin[l][n]>-threshold and gatelin[l][n]<threshold:
-    #                 cd+=1
-    #             else:
-    #                 other_cd+=1
-    #     elif linout[l][n]>threshold:
-    #         if (gateout[l][n]<-threshold) or (gateout[l][n]>threshold):
-    #             if torch.copysign(gatelin[l][n], gateout[l][n])>threshold:
-    #                 e+=1
-    #             else:
-    #                 other_e+=1
-    #         else:
-    #             if gatelin[l][n]>-threshold and gatelin[l][n]<threshold:
-    #                 ce+=1
-    #             else:
-    #                 other_ce+=1
-    #     else:
-    #         if gateout[l][n]>-threshold and gateout[l][n]<threshold:
-    #             oo+=1
-    #         else:
-    #             if gatelin[l][n]>-threshold and gatelin[l][n]<threshold:
-    #                 pc+=1
-    #             else:
-    #                 other_pc+=1
-    # return {"depletion": d,
-    #         "atypical depletion": other_d,
-    #         "conditional depletion": cd,
-    #         "atypical conditional depletion": other_cd,
-    #         "orthogonal output": oo,
-    #         "proportional change": pc,
-    #         "atypical proportional change": other_pc,
-    #         "conditional enrichment": ce,
-    #         "atypical conditional enrichment": other_ce,
-    #         "enrichment": e,
-    #         "atypical enrichment": other_e}
+#     for l,n in indices:
+#         category = compute_category(linout[l][n], gateout[l][n], gatelin[l][n], threshold)
+#         answer[category] +=1
+#     return answer
 
-def category_lists(indices, gatelin, gateout, linout, threshold=.5):
-    """
-    Use this only for a small list of indices.
-    To list all categories, use categories().
-    If you have already done that,
-    you can just read everything off from the output tensor of categories().
-    """
-    answer = {key:[] for key in COMBO_TO_NAME}
-    for l,n in indices:
-        category = compute_category(linout[l][n], gateout[l][n], gatelin[l][n], threshold)
-        answer[category].append((l,n))
-    return answer
-    # d = []
-    # cd = []
-    # oo = []
-    # pc = []
-    # ce = []
-    # e = []
-    # if atypical:
-    #     other_d = []
-    #     other_cd = []
-    #     other_pc = []
-    #     other_ce = []
-    #     other_e = []
-
-    # for ln in indices:
-    #     l = ln[0]
-    #     n = ln[1]
-    #     if linout[l][n]<-threshold:
-    #         if (gateout[l][n]<-threshold) or (gateout[l][n]>threshold):
-    #             if torch.copysign(gatelin[l][n], gateout[l][n])<-threshold:
-    #                 d.append((l,n))
-    #             elif atypical:
-    #                 other_d.append((l,n))
-    #         else:
-    #             if gatelin[l][n]>-threshold and gatelin[l][n]<threshold:
-    #                 cd.append((l,n))
-    #             elif atypical:
-    #                 other_cd.append((l,n))
-    #     elif linout[l][n]>threshold:
-    #         if (gateout[l][n]<-threshold) or (gateout[l][n]>threshold):
-    #             if torch.copysign(gatelin[l][n], gateout[l][n])>threshold:
-    #                 e.append((l,n))
-    #             elif atypical:
-    #                 other_e.append((l,n))
-    #         else:
-    #             if gatelin[l][n]>-threshold and gatelin[l][n]<threshold:
-    #                 ce.append((l,n))
-    #             elif atypical:
-    #                 other_ce.append((l,n))
-    #     else:
-    #         if gateout[l][n]>-threshold and gateout[l][n]<threshold:
-    #             oo.append((l,n))
-    #         else:
-    #             if gatelin[l][n]>-threshold and gatelin[l][n]<threshold:
-    #                 pc.append((l,n))
-    #             elif atypical:
-    #                 other_pc.append((l,n))
-
-    # ans = {"depletion": d,
-    #         "conditional depletion": cd,
-    #         "orthogonal output": oo,
-    #         "proportional change": pc,
-    #         "conditional enrichment": ce,
-    #         "enrichment": e,
-    # }
-    # if atypical:
-    #     ans["atypical depletion"] = other_d
-    #     ans["atypical conditional depletion"] = other_cd
-    #     ans["atypical proportional change"] = other_pc
-    #     ans["atypical conditional enrichment"] = other_ce
-    #     ans["atypical enrichment"] = other_e
-
-    # return ans
-
-# def categories(gatelin, gateout, linout, threshold=.5):
-#     """Returns tensor of shape (layer, neuron, 3)
-#     with integers indicating the category of the corresponding neuron,
-#     following COMBO_TO_NAME"""
-    #category_tensor = torch.full_like(gatelin, 6) #category_names[6]==orthogonal output
-    # category_tensor[(linout>threshold) &
-    #         (torch.abs(gateout)>threshold) &
-    #         (torch.copysign(gatelin, gateout)>threshold)] = 0 #enrichment
-    # category_tensor[(linout>threshold) &
-    #         (torch.abs(gateout)>threshold) &
-    #         (torch.copysign(gatelin, gateout)<=threshold)] = 1#'atypical enrichment'
-    # category_tensor[(linout>threshold) &
-    #         (torch.abs(gateout)<=threshold) &
-    #         (torch.abs(gatelin)<=threshold)] = 2#'conditional enrichment'
-    # category_tensor[(linout>threshold) &
-    #         (torch.abs(gateout)<=threshold) &
-    #         (torch.abs(gatelin)>threshold)] = 3#'atypical conditional enrichment'
-    # category_tensor[(torch.abs(linout)<=threshold) &
-    #         (torch.abs(gateout)>threshold) &
-    #         (torch.abs(gatelin)<=threshold)] = 4#'proportional change'
-    # category_tensor[(torch.abs(linout)<=threshold) &
-    #         (torch.abs(gateout)>threshold) &
-    #         (torch.abs(gatelin)>threshold)] = 5#'atypical proportional change'
-    # category_tensor[(linout<-threshold) &
-    #         (torch.abs(gateout)>threshold) &
-    #         (torch.copysign(gatelin, gateout)<-threshold)] = 7#'depletion'
-    # category_tensor[(linout<-threshold) &
-    #         (torch.abs(gateout)>threshold) &
-    #         (torch.copysign(gatelin, gateout)>=-threshold)] = 8#'atypical depletion'
-    # category_tensor[(linout<-threshold) &
-    #         (torch.abs(gateout)<=threshold) &
-    #         (torch.abs(gatelin)<=threshold)] = 9#'conditional depletion'
-    # category_tensor[(linout<-threshold) &
-    #         (torch.abs(gateout)<=threshold) &
-    #         (torch.abs(gatelin)>threshold)] = 10#'atypical conditional depletion'
-    # return category_tensor
+# def category_lists(indices, gatelin, gateout, linout, threshold=.5):
+#     """
+#     Use this only for a small list of indices.
+#     To list all categories, use categories().
+#     If you have already done that,
+#     you can just read everything off from the output tensor of categories().
+#     """
+#     answer = {key:[] for key in COMBO_TO_NAME}
+#     for l,n in indices:
+#         category = compute_category(linout[l][n], gateout[l][n], gatelin[l][n], threshold)
+#         answer[category].append((l,n))
+#     return answer
 
 def is_in_category(category_tensor, category_key):
     """Return a tensor of booleans indicating for each neuron if it belongs to the given category
 
     Args:
-        category_tensor (tensor): output of compute_category, shape (layer, neuron, 3)
-        category_key (tuple): one of the keys of COMBO_TO_NAME
+        category_tensor (tensor): output of compute_category,
+            shape (layer, neuron, 3) for GLU variants, or (layer, neuron) for vanilla
+        category_key (tuple):
+            one of the keys of COMBO_TO_NAME (for GLU variants), or an int (for vanilla)
 
     Returns:
         tensor: tensor of booleans of shape (layer, neuron)
     """
     key_tensor = torch.tensor(category_key).to(category_tensor.device)
     eq = category_tensor==key_tensor
-    return eq.all(dim=-1)
+    if category_tensor.dim()==3 and category_tensor.shape[-1]==3:
+        return eq.all(dim=-1)
+    return eq
 
 def layerwise_count(category_tensor:torch.Tensor):
     """count how often each category appears per layer
 
     Args:
         category_tensor (tensor): output of compute_category,
-            shape (layer, neuron, 3)
+            shape (layer, neuron, 3) for GLU variants, or (layer, neuron) for vanilla
 
     Returns:
         dict with
-            keys: as in COMBO_TO_NAME
+            keys: as in COMBO_TO_NAME (for GLU variants), or ints (for vanilla)
             values: tensors of shape (layer),
             indicating the number of times the category appears in each layer
     """
-    results = {key:torch.zeros(category_tensor.shape[0]) for key in COMBO_TO_NAME}
-    for key in COMBO_TO_NAME:
+    if category_tensor.dim()==3 and category_tensor.shape[-1]==3:
+        combo_name_dict = COMBO_TO_NAME
+    else:
+        combo_name_dict = {key[0]:COMBO_TO_NAME[key] for key in [(1,1,1),(0,0,1),(-1,1,1)]}
+    results = {key:torch.zeros(category_tensor.shape[0]) for key in combo_name_dict}
+    for key in combo_name_dict:
         results[key] = torch.count_nonzero(is_in_category(category_tensor, key), dim=1)
     return results
 

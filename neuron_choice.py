@@ -5,19 +5,19 @@ from os.path import exists
 import random
 import torch
 
-from utils import COMBO_TO_NAME, is_in_category
+from utils import COMBO_TO_NAME, is_in_category, STRENGTHENING, WEAKENING
 
-# CATEGORY_NAMES = ["enrichment",
-#             "atypical enrichment",
-#             "conditional enrichment",
-#             "atypical conditional enrichment",
-#             "proportional change",
-#             "atypical proportional change",
-#             "orthogonal output",
-#             "depletion",
-#             "atypical depletion",
-#             "conditional depletion",
-#             "atypical conditional depletion"]
+VANILLA_CATEGORIES = {
+    1: STRENGTHENING,
+    0: "orthogonal output",
+    -1: WEAKENING,
+}
+
+def _key_to_name(category_key):
+    if isinstance(category_key, tuple):
+        return COMBO_TO_NAME[category_key]
+    else:
+        return VANILLA_CATEGORIES[category_key]
 
 def neuron_choice(args, category_key, subset=None, baseline=True):
     """
@@ -26,7 +26,7 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
 
     Args:
         args: arguments from argument parser
-        category_key (tuple): 
+        category_key (tuple or int): key for COMBO_TO_NAME or for the vanilla version
         d_mlp (int):
             number of neurons per layer of the model. Necessary when creating a random baseline.
         subset (None or float or int, default None): how many neurons to choose from the category.
@@ -59,7 +59,8 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
         if subset<len(neuron_list):
             neuron_list = random.sample(neuron_list, subset)
         elif subset>len(neuron_list):
-            print(f"Warning: category {COMBO_TO_NAME[category_key]} only contains {len(neuron_list)} neurons.")
+            category_name = _key_to_name(category_key)
+            print(f"Warning: category {category_name} only contains {len(neuron_list)} neurons.")
             return None, None
     if baseline:
         #TODO adapt baseline to activation frequencies
@@ -100,8 +101,9 @@ def random_baseline(neuron_list, data_categories, category_key):
         if number<d_mlp/2:
             baseline_sublist = random.sample(baseline_sublist, number)
         else:
+            category_name = _key_to_name(category_key)
             print(
-                f"Warning: category {COMBO_TO_NAME[category_key]} covers more than half of neurons",
+                f"Warning: category {category_name} covers more than half of neurons",
                 f"in layer {layer} ({number} of {d_mlp})"
             )
         baseline_list.extend([(layer,neuron.item()) for neuron in baseline_sublist])

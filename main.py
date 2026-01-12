@@ -165,9 +165,10 @@ def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
     if "categories" in args.experiments:# and 'categories' not in data:
         print("classifying neurons")
         data['categories'] = utils.compute_category(
-            gatelin=data['gatelin'].to(DEVICE),
-            gateout=data['gateout'].to(DEVICE),
-            linout=data['linout'].to(DEVICE)
+            # gatelin=data['gatelin'].to(DEVICE),
+            # gateout=data['gateout'].to(DEVICE),
+            # linout=data['linout'].to(DEVICE)
+            data=data, device=DEVICE,
             ) #layer neuron
     if "category_stats" in args.experiments:# and 'category_stats' not in data:
         print("category statistics")
