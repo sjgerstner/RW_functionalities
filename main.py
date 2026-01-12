@@ -54,14 +54,25 @@ MODEL_TO_CHECKPOINTS = {
 }
 
 def _load_model_data(model_name, cache_dir=None, checkpoint_value=None, refactor_glu=True):
-    model = HookedTransformer.from_pretrained(
-        model_name,
-        checkpoint_value=checkpoint_value,
-        cache_dir=cache_dir,
-        local_files_only=True,#TODO you can change this to false if needed
-        device='cpu',
-        refactor_glu=refactor_glu,
-        ) #changed the transformer_lens code, don't disable fold_ln
+    model_kwargs = {
+        "checkpoint_value":checkpoint_value,
+        "cache_dir":cache_dir,
+        "device":"cpu",
+        "refactor_glu":refactor_glu,
+    }
+    try:
+        model = HookedTransformer.from_pretrained(
+            model_name,
+            local_files_only=True,
+            **model_kwargs,
+        )
+    except OSError:
+        print(f"need to fetch remote files for model {model_name}")
+        model = HookedTransformer.from_pretrained(
+            model_name,
+            local_files_only=False,
+            **model_kwargs,
+        )
 
     #new shape: layer neuron model_dim
     W_gate = einops.rearrange(model.W_gate.detach(), 'l d n -> l n d').to(DEVICE)
@@ -231,7 +242,7 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
         path
     )
     #cosines etc.
-    if ("linout" not in data) or ("randomness" not in data):
+    if ("linout" not in data) or (("randomness" in args.experiments) and "randomness" not in data):
         data = _get_basic_data(
             args, data, model_name, cache_dir=cache_dir, checkpoint_value=checkpoint_value
         )
