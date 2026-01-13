@@ -9,7 +9,7 @@ import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from utils import COMBO_TO_NAME
+from utils import COMBO_TO_NAME, VANILLA_CATEGORIES
 
 torch.set_grad_enabled(False)
 
@@ -43,6 +43,12 @@ CATEGORY_COLORS = {
 }
 CATEGORY_COLORS[(0,0,1)]=(0.9,0.9,0.9,1)
 
+VANILLA_COLORS = {
+    1: CATEGORY_COLORS[(1,1,1)],
+    0: CATEGORY_COLORS[(0,0,1)],
+    -1: CATEGORY_COLORS[(-1,1,1)],
+}
+
 SHORT_TO_LONG = {
     "gatelin":"$cos(w_{gate}, w_{in})$",
     "gateout":"$cos(w_{gate}, w_{out})$",
@@ -51,7 +57,7 @@ SHORT_TO_LONG = {
 }
 
 def my_survey(
-    results, model_name, names_and_colors=CATEGORY_COLORS
+    results:dict, model_name:str,
 ):
     """
     Parameters
@@ -67,6 +73,15 @@ def my_survey(
     category_colors: list of tuples of 4 floats
         The rgba colors corresponding to the categories
     """
+    if (1,1,1) in results.keys():
+        names_and_colors, combo_to_name = CATEGORY_COLORS, COMBO_TO_NAME
+    elif 1 in results.keys():
+        names_and_colors, combo_to_name = VANILLA_CATEGORIES, VANILLA_COLORS
+    else:
+        raise NotImplementedError(
+            f"The dictionary keys do not seem to correspond to the categories we defined: \
+                {results.keys()}"
+        )
     #my preprocessing:
     # labels = list(results.keys())
     # data = np.array(list(results.values()))
@@ -89,7 +104,7 @@ def my_survey(
         starts = data_cum[:, i] - widths
         rects = ax.barh(labels, widths, left=starts,
                         #height=0.5,
-                        label=COMBO_TO_NAME[key], color=color)
+                        label=combo_to_name[key], color=color)
         if any(widths>700):
             r, g, b, _ = color
             text_color = 'black' if (r>.5 or g>.5) else 'white'#TODO
@@ -107,7 +122,12 @@ def my_survey(
 
     return fig, ax
 
-def wcos_plot(data, layer_list, arrangement, model_name):
+def wcos_plot(data, layer_list, arrangement):
+    if "gateout" in data:
+        return wcos_scatter(data, layer_list, arrangement)
+    return wcos_strip(data, layer_list)
+
+def wcos_scatter(data, layer_list, arrangement):
     fig, axs = plt.subplots(arrangement[0], arrangement[1],
                         sharex=True,
                         sharey=True,
@@ -180,6 +200,28 @@ def wcos_plot(data, layer_list, arrangement, model_name):
     #fig.suptitle(model_name, fontsize=10, y=0.9)
 
     return fig, axs
+
+def wcos_strip(data:dict[str,torch.Tensor], layer_list:list[int]):
+    """Strip plot of weight cosines by layer, for vanilla activation functions.
+
+    Args:
+        data (dict[str,torch.Tensor]):
+            only relevant key is "linout", where the value is a tensor of shape (layer,neuron)
+        layer_list (list[int]): list of layers to include in the plot
+
+    Returns:
+        fig, ax
+    """
+    df = {
+        "layer": layer_list,
+        "linout": [data["linout"][layer] for layer in layer_list]
+    }
+    fig, ax = plt.subplots()
+    fig.set_figwidth(6.75)
+    fig.set_figheight(4.5)
+    ax.set_ylim(-1.,1.)
+    sns.stripplot(data=df, x="layer", y="linout", ax=ax)
+    return fig, ax
 
 def plot_boxplots(data, model_name):
     n_layers = data['gatelin'].shape[0]

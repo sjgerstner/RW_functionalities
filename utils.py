@@ -17,13 +17,13 @@ WEAKENING = "weakening"
 COMBO_TO_NAME = {
     #keys are triples each of which represents, in order:
     #. approx(cos(w_in,w_out)) (1 or 0 or -1),
-    #. |approx(cos(w_gate,w_out))| (1 or 0), 
+    #. |approx(cos(w_gate,w_out))| (1 or 0),
     #. approx(cos(w_gate,w_in))==approx(cos(w_gate,out))*approx(cos(w_in,w_out)) (1 or 0),
     #   but 1 for orthogonal output.
     (1,1,1): STRENGTHENING,
     (1,1,0): f"atypical {STRENGTHENING}",
     (1,0,1): f"conditional {STRENGTHENING}",
-    (1,0,0): f"atypical conditional {STRENGTHENING}", 
+    (1,0,0): f"atypical conditional {STRENGTHENING}",
     (0,1,1): "proportional change",
     (0,1,0): "atypical proportional change",
     (0,0,1): "orthogonal output",
@@ -32,7 +32,13 @@ COMBO_TO_NAME = {
     (-1,0,1): f"conditional {WEAKENING}",
     (-1,0,0): f"atypical conditional {WEAKENING}",
 }
-NAME_TO_COMBO = {v:k for k,v in COMBO_TO_NAME.items()}
+NAME_TO_COMBO = {v:k for k,v in COMBO_TO_NAME.items()}#TODO equivalent for vanilla
+
+VANILLA_CATEGORIES = {
+    1: STRENGTHENING,
+    0: "orthogonal output",
+    -1: WEAKENING,
+}
 
 def pretty_print(mydict):
     for key, value in mydict.items():
@@ -265,8 +271,12 @@ def randomness_regions(mlp_weights, p=0.05):
         "linout": randomness_region(mlp_weights["W_in"], mlp_weights["W_out"], p),
     }
     if "W_gate" in mlp_weights:
-        answer["gatelin"] = randomness_region(mlp_weights["W_gate"], mlp_weights["W_in"], p, absolute=True)
-        answer["gateout"] = randomness_region(mlp_weights["W_gate"], mlp_weights["W_out"], p)
+        answer["gatelin"] = randomness_region(
+            mlp_weights["W_gate"], mlp_weights["W_in"], p, absolute=True
+        )
+        answer["gateout"] = randomness_region(
+            mlp_weights["W_gate"], mlp_weights["W_out"], p
+        )
     return answer
 
 def beta_randomness_region(d, p=0.05):
@@ -308,8 +318,12 @@ def compute_category(data, threshold=.5, device=None):
     approx_linout = _approx(data["linout"], threshold)
     if "gateout" in data:
         approx_gateout = _approx(data["gateout"], threshold)
-        typical = torch.where(_approx(data["gatelin"], threshold)==approx_linout*approx_gateout, 1, 0)
-        typical = torch.where((approx_linout==0) & (approx_gateout==0), 1, typical)
+        typical = torch.where(
+            _approx(data["gatelin"], threshold)==approx_linout*approx_gateout, 1, 0
+        )
+        typical = torch.where(
+            (approx_linout==0) & (approx_gateout==0), 1, typical
+        )
         answer = (approx_linout, torch.abs(approx_gateout), typical)
         if isinstance(data["linout"], torch.Tensor):
             return torch.stack(answer, dim=-1)

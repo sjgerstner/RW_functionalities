@@ -186,7 +186,7 @@ def _make_plots(args, data, model_name, path):
             data,
             range(layers),
             arrangement = (int(np.ceil(layers/ncols)), ncols),
-            model_name=model_name
+            # model_name=model_name
         )
         fig.savefig(
             f"{path}/fine.pdf",
@@ -200,7 +200,7 @@ def _make_plots(args, data, model_name, path):
             data,
             args.selected_layers,
             arrangement= (1, len(args.selected_layers)),
-            model_name=model_name,
+            # model_name=model_name,
         )
         fig.savefig(
             f"{path}/selected.pdf",
