@@ -214,7 +214,7 @@ def wcos_vanilla(data:dict[str,torch.Tensor], layer_list:list[int]):
         fig, ax
     """
     fig, ax = plt.subplots()
-    fig.set_figwidth(7)
+    fig.set_figwidth(6.75)
     fig.set_figheight(4.5)
     ax.set_ylim(-1.,1.)
     df = pd.DataFrame.from_records(
@@ -227,47 +227,65 @@ def wcos_vanilla(data:dict[str,torch.Tensor], layer_list:list[int]):
             for layer in layer_list for neuron in range(data["linout"].shape[-1])
         ]
     )
-    sns.boxenplot(#TODO histograms as alternative/complement to boxenplot?
-        data=df, x="layer", y=SHORT_TO_LONG["linout"],
-        ax=ax,
-    )
     #TODO randomness regions
-    # ax.hist2d(
-        # x=[layer for layer in layer_list for _neuron in range(data["linout"].shape[-1])],
-        # y=[data["linout"][layer,neuron].item() for layer in layer_list for neuron in range(data["linout"].shape[-1])],
-        # cbar=True,
-        # bins=(len(layer_list), 100),
-        # cbar_kws={'orientation': 'vertical', 'pad':0.02, 'label':'number of neurons'}
-    # )
+    sns.histplot(
+        df, x="layer", y=SHORT_TO_LONG["linout"],
+        cbar=True,
+        bins=(len(layer_list), 100),
+        discrete=(True,False),
+        cbar_kws={'orientation': 'vertical', 'pad':0.02, 'label':'number of neurons'}
+    )
     return fig, ax
 
-def plot_boxplots(data, model_name):
-    n_layers = data['gatelin'].shape[0]
+def plot_boxplots(data:dict[str,torch.Tensor], model_name:str, layer_list:list[int]|range|None=None):
+    if layer_list is None:
+        layer_list = range(data['linout'].shape[0])
+    #n_layers = data['gatelin'].shape[0] if layer_list is None else len(layer_list)
+    n_neurons = data["linout"].shape[-1]
     fig, axs = plt.subplots(
-        nrows=3,
+        nrows=3 if "gateout" in data else 1,
         ncols=1,
         sharex=True,
     )
     fig.set_figwidth(6.75)
     fig.set_figheight(4.5)
-    for i, (k,v) in enumerate(SHORT_TO_LONG.items()):
-        if k not in data:
+    df = pd.DataFrame.from_records(
+        [
+            {
+                "layer": layer,
+                "neuron": neuron,
+            }
+            for layer in layer_list for neuron in range(n_neurons)
+        ]
+    )
+    for i, (short,long) in enumerate(SHORT_TO_LONG.items()):
+        current_ax = axs[i] if "gate" in data else axs
+        if short not in data:
             continue
-        mydata = data[k]
-        if 'gate' in k:
+        mydata = data[short]
+        if short=="gatelin":
             mydata = torch.abs(mydata)
-            v = '$|' + v.strip('$') + '|$'
-            axs[i].set_ylim(0.,1.)
+            long = '$|' + long.strip('$') + '|$'
+            current_ax.set_ylim(0.,1.)
         else:
-            axs[i].set_ylim(-1.,1.)
+            current_ax.set_ylim(-1.,1.)
+        df[long]=[
+            mydata[layer,neuron].item()
+            for layer in layer_list for neuron in range(n_neurons)
+        ]
         #zero-based indexing for consistency
-        axs[i].boxplot(
-            mydata.T,
-            tick_labels=[str(i) for i in range(n_layers)],
-            flierprops={'rasterized':True},
+        # axs[i].boxplot(
+        #     mydata.T,
+        #     tick_labels=[str(i) for i in range(n_layers)],
+        #     flierprops={'rasterized':True},
+        # )
+        sns.boxenplot(
+            data=df, x="layer", y=long,
+            ax=current_ax,
         )
-        axs[i].set_ylabel(v, fontsize=10)
-    fig.supxlabel('Layer', fontsize=10)
+        #TODO randomness regions
+        #axs[i].set_ylabel(v, fontsize=10)
+    #fig.supxlabel('Layer', fontsize=10)
     fig.suptitle(model_name, fontsize=10)
     return fig, axs
 

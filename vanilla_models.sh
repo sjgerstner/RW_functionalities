@@ -2,7 +2,7 @@
 set -euox pipefail
 
 python main.py \
-    --experiments beta categories category_stats plot_fine plot_coarse \
+    --experiments beta categories category_stats plot_fine plot_coarse plot_boxplots \
     --model \
         "gpt2-small" \
         "gpt2-medium" \
