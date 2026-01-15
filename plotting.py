@@ -3,6 +3,7 @@
 import itertools
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 import torch
 
@@ -75,8 +76,10 @@ def my_survey(
     """
     if (1,1,1) in results.keys():
         names_and_colors, combo_to_name = CATEGORY_COLORS, COMBO_TO_NAME
+        labels = [f'Layer {n}' for n in range(results[(1,1,1)].numel())]#[0,...,31] if 32 layers
     elif 1 in results.keys():
-        names_and_colors, combo_to_name = VANILLA_CATEGORIES, VANILLA_COLORS
+        names_and_colors, combo_to_name = VANILLA_COLORS, VANILLA_CATEGORIES
+        labels = [f'Layer {n}' for n in range(results[1].numel())]#[0,...,31] if 32 layers
     else:
         raise NotImplementedError(
             f"The dictionary keys do not seem to correspond to the categories we defined: \
@@ -85,8 +88,6 @@ def my_survey(
     #my preprocessing:
     # labels = list(results.keys())
     # data = np.array(list(results.values()))
-    labels = list(range(results[(1,1,1)].numel()))#[0,...,31] if 32 layers
-    labels = [f'Layer {n}' for n in labels]
     data = np.array(torch.stack(list(results.values()), dim=-1).cpu())
 
     data_cum = data.cumsum(axis=1)#cumsum over categories
@@ -125,7 +126,7 @@ def my_survey(
 def wcos_plot(data, layer_list, arrangement):
     if "gateout" in data:
         return wcos_scatter(data, layer_list, arrangement)
-    return wcos_strip(data, layer_list)
+    return wcos_vanilla(data, layer_list)
 
 def wcos_scatter(data, layer_list, arrangement):
     fig, axs = plt.subplots(arrangement[0], arrangement[1],
@@ -201,7 +202,7 @@ def wcos_scatter(data, layer_list, arrangement):
 
     return fig, axs
 
-def wcos_strip(data:dict[str,torch.Tensor], layer_list:list[int]):
+def wcos_vanilla(data:dict[str,torch.Tensor], layer_list:list[int]):
     """Strip plot of weight cosines by layer, for vanilla activation functions.
 
     Args:
@@ -212,15 +213,32 @@ def wcos_strip(data:dict[str,torch.Tensor], layer_list:list[int]):
     Returns:
         fig, ax
     """
-    df = {
-        "layer": layer_list,
-        "linout": [data["linout"][layer] for layer in layer_list]
-    }
     fig, ax = plt.subplots()
-    fig.set_figwidth(6.75)
+    fig.set_figwidth(7)
     fig.set_figheight(4.5)
     ax.set_ylim(-1.,1.)
-    sns.stripplot(data=df, x="layer", y="linout", ax=ax)
+    df = pd.DataFrame.from_records(
+        [
+            {
+                "layer": layer,
+                "neuron": neuron,
+                SHORT_TO_LONG["linout"]: data["linout"][layer,neuron].item()
+            }
+            for layer in layer_list for neuron in range(data["linout"].shape[-1])
+        ]
+    )
+    sns.boxenplot(#TODO histograms as alternative/complement to boxenplot?
+        data=df, x="layer", y=SHORT_TO_LONG["linout"],
+        ax=ax,
+    )
+    #TODO randomness regions
+    # ax.hist2d(
+        # x=[layer for layer in layer_list for _neuron in range(data["linout"].shape[-1])],
+        # y=[data["linout"][layer,neuron].item() for layer in layer_list for neuron in range(data["linout"].shape[-1])],
+        # cbar=True,
+        # bins=(len(layer_list), 100),
+        # cbar_kws={'orientation': 'vertical', 'pad':0.02, 'label':'number of neurons'}
+    # )
     return fig, ax
 
 def plot_boxplots(data, model_name):

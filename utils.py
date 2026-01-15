@@ -155,22 +155,22 @@ def neuron_analysis(model, layer, neuron, emb=None, k=64, verbose=True):
     """
     out = model.W_out[layer,neuron,:].detach()
     lin = model.W_in[layer,:,neuron].detach()
-    gate = model.W_gate[layer,:,neuron].detach()
-
-    gatelin = cos(gate, lin).item()
-    gateout = cos(gate, out).item()
     linout = cos(lin, out).item()
-
     out_pos = topk_df(out, model, emb=emb, k=k)
     out_neg = topk_df(-out, model, emb=emb, k=k)
     lin_pos = topk_df(lin, model, emb=emb, k=k)
     lin_neg = topk_df(-lin, model, emb=emb, k=k)
-    gate_pos = topk_df(gate, model, emb=emb, k=k)
-    gate_neg = topk_df(-gate, model, emb=emb, k=k)
+    if hasattr(model, "W_gate") and model.W_gate is not None:
+        gate = model.W_gate[layer,:,neuron].detach()
+        gatelin = cos(gate, lin).item()
+        gateout = cos(gate, out).item()
+        gate_pos = topk_df(gate, model, emb=emb, k=k)
+        gate_neg = topk_df(-gate, model, emb=emb, k=k)
 
     if verbose:
-        print("gate vs. linear similarity:", gatelin)
-        print("gate vs. out similarity:", gateout)
+        if hasattr(model, "W_gate") and model.W_gate is not None:
+            print("gate vs. linear similarity:", gatelin)
+            print("gate vs. out similarity:", gateout)
         print("lin vs. out similarity:", linout)
         print("================================")
         print("most similar tokens for w_out:")
@@ -184,14 +184,18 @@ def neuron_analysis(model, layer, neuron, emb=None, k=64, verbose=True):
         print("================================")
         print("most similar tokens for -w_in:")
         print(lin_neg)
-        print("================================")
-        print("most similar tokens for w_gate:")
-        print(gate_pos)
-        print("================================")
-        print("most similar tokens for -w_gate:")
-        print(gate_neg)
+        if hasattr(model, "W_gate") and model.W_gate is not None:
+            print("================================")
+            print("most similar tokens for w_gate:")
+            print(gate_pos)
+            print("================================")
+            print("most similar tokens for -w_gate:")
+            print(gate_neg)
 
-    return gatelin, gateout, linout, out_pos, out_neg, lin_pos, lin_neg, gate_pos, gate_neg
+    if hasattr(model, "W_gate") and model.W_gate is not None:
+        return gatelin, gateout, linout, out_pos, out_neg, lin_pos, lin_neg, gate_pos, gate_neg
+    else:
+        return linout, out_pos, out_neg, lin_pos, lin_neg
 
 def cos(v1,v2, pattern='... d, ... d -> ...'):
     "batched cosine similarities"
@@ -313,7 +317,11 @@ def compute_category(data, threshold=.5, device=None):
     If args are tensors (of shape (layer,neuron)): Returns tensor of shape (layer, neuron, 3)
     """
     if device:
-        moved_data = {key:value.to(device) for key,value in data.items()}
+        moved_data = {
+            key:
+            (value.to(device) if isinstance(value, torch.Tensor) else value)
+            for key,value in data.items()
+        }
         data = moved_data
     approx_linout = _approx(data["linout"], threshold)
     if "gateout" in data:
