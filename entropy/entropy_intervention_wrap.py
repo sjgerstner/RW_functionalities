@@ -192,6 +192,7 @@ if __name__ == '__main__':
     tokenized_dataset = datasets.load_from_disk(
         f'{args.data_dir}/{args.token_dataset}'
     )
+    tokenized_dataset = tokenized_dataset.select_columns('input_ids')
     if args.neuron_subset_name=='baseline':
         neuron_list = []
         random_baseline=None
