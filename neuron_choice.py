@@ -91,7 +91,11 @@ def random_baseline(neuron_list, data_categories, category_key):
     for layer,number in enumerate(layer_counts):
         if number==0:
             continue
-        baseline_sublist = list(torch.nonzero(~is_in_category(data_categories[layer],category_key)))
+        baseline_sublist = list(
+            torch.nonzero(
+                ~is_in_category(data_categories[layer],category_key).flatten()
+            )
+        )
         if number<d_mlp/2:
             baseline_sublist = random.sample(baseline_sublist, number)
         else:
