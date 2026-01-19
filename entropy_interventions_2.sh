@@ -3,8 +3,7 @@ set -euox pipefail
 
 intervention_type=${1:-zero_ablation}
 
-names=("strengthening" "conditional strengthening" "proportional change" "conditional weakening") #don't need weakening here
-signs=("+" "-")
+names=("conditional strengthening" "proportional change" "conditional weakening") #don't need weakening here
 
 for i in "${!names[@]}"; do
     neuron_subset_name=${names[i]}
