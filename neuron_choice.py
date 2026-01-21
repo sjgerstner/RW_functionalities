@@ -105,6 +105,17 @@ def random_baseline(neuron_list, data_categories, category_key):
         baseline_list.extend([(layer,neuron) for neuron in baseline_sublist])
     return baseline_list
 
+def get_n_neurons(args):
+    if args.by_freq:
+        n_neurons = int(args.n_neurons)
+        freq_data = pd.read_pickle(f'plots/freq/{args.by_freq}_means.pickle')
+        constant_freq = freq_data.loc[args.constant_class]["true"]
+        constant = constant_freq * n_neurons
+        return n_neurons, constant
+    if args.n_neurons:
+        return float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons), None
+    return None, None
+
 # def random_baseline_old(layer, category_index, data, other_neurons, d_mlp):
 #     """Unused!"""
 #     other_neuron = random.randint(0, d_mlp-1)
