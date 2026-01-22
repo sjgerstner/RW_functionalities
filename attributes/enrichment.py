@@ -31,7 +31,7 @@ from attributes.utils import (
     record_logitlens,
     decode_tokens,
 )
-from neuron_choice import neuron_choice
+from neuron_choice import neuron_choice, get_n_neurons
 from utils import NAME_TO_COMBO
 from entropy.entropy_intervention_wrap import get_mean_values
 
@@ -170,15 +170,7 @@ if __name__=="__main__":
         tmp = pd.concat([tmp, baseline_df], ignore_index=True)
         tmp.to_pickle(DF_PATH)
 
-    if args.by_freq:
-        N_NEURONS = int(args.n_neurons)
-        freq_data = pd.read_pickle(f'plots/freq/{args.by_freq}_means.pickle')
-        constant_freq = freq_data.loc[args.constant_class]["true"]
-        CONSTANT = constant_freq * N_NEURONS
-    elif args.n_neurons:
-        N_NEURONS = float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons)
-    else:
-        N_NEURONS = None
+    N_NEURONS, CONSTANT = get_n_neurons(args)
     for subset_name in args.subsets:
         clear_subset_name = f'{subset_name}{N_NEURONS}' if N_NEURONS else subset_name
         baseline_name=f'{clear_subset_name}_baseline'

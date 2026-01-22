@@ -91,7 +91,9 @@ def random_baseline(neuron_list, data_categories, category_key):
     for layer,number in enumerate(layer_counts):
         if number==0:
             continue
-        baseline_sublist = list(torch.nonzero(~is_in_category(data_categories[layer],category_key)))
+        baseline_sublist = torch.nonzero(
+                ~is_in_category(data_categories[layer:layer+1],category_key)#.flatten()
+            )[:,1].tolist()
         if number<d_mlp/2:
             baseline_sublist = random.sample(baseline_sublist, number)
         else:
@@ -100,8 +102,19 @@ def random_baseline(neuron_list, data_categories, category_key):
                 f"Warning: category {category_name} covers more than half of neurons",
                 f"in layer {layer} ({number} of {d_mlp})"
             )
-        baseline_list.extend([(layer,neuron.item()) for neuron in baseline_sublist])
+        baseline_list.extend([(layer,neuron) for neuron in baseline_sublist])
     return baseline_list
+
+def get_n_neurons(args):
+    if args.by_freq:
+        n_neurons = int(args.n_neurons)
+        freq_data = pd.read_pickle(f'plots/freq/{args.by_freq}_means.pickle')
+        constant_freq = freq_data.loc[args.constant_class]["true"]
+        constant = constant_freq * n_neurons
+        return n_neurons, constant
+    if args.n_neurons:
+        return float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons), None
+    return None, None
 
 # def random_baseline_old(layer, category_index, data, other_neurons, d_mlp):
 #     """Unused!"""
