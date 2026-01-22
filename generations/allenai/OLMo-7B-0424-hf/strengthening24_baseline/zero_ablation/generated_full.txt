@@ -1,0 +1,19 @@
+Q: How guaranteed is OCI's amb.From() function? The OCI9.4 implementation of Database::Connection::From (Tcl 8.6) says:
+
+The value result is not referenced after it is created. If you need to use it more than once, use result.assign or sys::object::copy to make a copy first.
+
+I can see in the datastructure that the OCI::Connect chunk keeps a pointer, and that a SQL::Connection chunk keeps the OCI handle. But since both allow access it could mean it might not have sense at all.
+What I want is to use the connection object that is returned before it is dropped, ie
+# this could be inside some loop 
+  mySQLConn.Execute {INSERT INTO tablename VALUES (NULL,<<, and so on)
+  mySQLConn.Execute {INSERT INTO tablename VALUES (NULL,<<, and so on)
+  mySQLConn.Execute... 
+} #end of loop 
+  mySQLConn.Release()
+
+which is unrelated to the mechanism of multiple dispatch?
+Am I correct that I can reuse the same connect() the number of times I need it, even after it is released via Release(), so I can reuse the number of sqlExecute() without re-connecting?
+
+A: Trying to loop through a connection without acquiring any semaphore locks is not a sure thing you'll be able to retrieve the connection.
+https://stackoverflow.com/a/17139821/2294305
+In my experience when you run out of connections and acquire a semaphore lock it's released when the connections are recovered.  I've also had instances where the connect and then acquire a semaphore only hung the application.  I was able to reproduce this exact scenario with database samples for Oracle 11.2g and 12.1.   Your luck is just going to be guessing on those likelihoods.
