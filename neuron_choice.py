@@ -43,7 +43,7 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
     data_path = f"{path}/data.pt"
     if not exists(data_path):
         data_path = f"{path}/refactored/data.pt"
-    data = torch.load(data_path)
+    data = torch.load(data_path, device=args.device)
     neuron_tensor = torch.nonzero(is_in_category(data['categories'],category_key))
     neuron_list = [tuple(line) for line in neuron_tensor]
     if subset is not None:
