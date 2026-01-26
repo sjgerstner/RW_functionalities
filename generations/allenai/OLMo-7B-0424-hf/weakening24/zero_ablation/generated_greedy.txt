@@ -1,0 +1,201 @@
+Q: How to get the value of a variable in a function in PHP? I have a function that is called by a button click.
+function myFunction() {
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+I want to get the value of $myVar in another function.
+function myOtherFunction() {
+    echo $myVar;
+}
+
+I tried to use global $myVar; but it didn't work.
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+Or you can use a class property.
+class MyClass {
+    public $myVar = "Hello";
+}
+
+function myFunction() {
+    $myClass = new MyClass();
+    $myClass->myVar = "Hello";
+    echo $myClass->myVar;
+}
+
+function myOtherFunction() {
+    $myClass = new MyClass();
+    echo $myClass->myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $myVar;
+    echo $myVar;
+}
+
+myFunction();
+myOtherFunction();
+
+
+A: You can use a global variable.
+function myFunction() {
+    global $myVar;
+    $myVar = "Hello";
+    echo $myVar;
+}
+
+function myOtherFunction() {
+    global $my

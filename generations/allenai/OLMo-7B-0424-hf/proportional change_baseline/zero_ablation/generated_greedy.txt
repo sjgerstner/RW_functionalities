@@ -1,0 +1,23 @@
+Q: How to get the value of a variable in a function in a different file? I have a file called main.py and a function in it called get_value().
+I want to get the value of a variable in a function in a different file.
+I have tried the following:
+main.py
+def get_value():
+    return 1
+
+other_file.py
+def get_value():
+    return get_value()
+
+But it doesn't work.
+
+A: You can use the following:
+main.py
+def get_value():
+    return 1
+
+other_file.py
+from main import get_value
+
+def get_value():
+    return get_value()
