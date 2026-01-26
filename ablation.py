@@ -84,9 +84,9 @@ def _get_args():
             "conditional weakening",
         ]
     )
-    parser.add_argument('--max_new_tokens', default=1024)
+    parser.add_argument('--max_new_tokens', default=1024, type=int)
     parser.add_argument(
-        'do_sample', action='store_true',
+        '--do_sample', action='store_true',
         help="""
         If true, sample from the full model distribution; otherwise, always select the top next token.
         ATTENTION: NO SEED IS SET YET, SO THE RESULTS ARE NON DETERMINISTIC!
@@ -114,7 +114,7 @@ if __name__=="__main__":
 
     N_NEURONS, _constant = get_n_neurons(args)
     temperature_str = "full" if args.do_sample else "greedy"
-    
+
     #baseline (no ablations)
     save_path_none = os.path.join(
             save_path,
@@ -131,7 +131,7 @@ if __name__=="__main__":
             mean_values=mean_values,
             **generate_kwargs,
         )
-    
+
     for subset_name in args.subsets:
         clear_subset_name = f'{subset_name}{N_NEURONS}' if N_NEURONS else subset_name
         baseline_name=f'{clear_subset_name}_baseline'

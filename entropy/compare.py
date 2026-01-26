@@ -8,7 +8,7 @@ import torch
 from plotting import aligned_histograms
 
 #%%
-def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation'):
+def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation')->torch.Tensor:
     #print('loading data...')
     baseline = torch.load(
         f'{data_path}/baseline/None_None/{metric}.pt',
