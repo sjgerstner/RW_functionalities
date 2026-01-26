@@ -10,7 +10,7 @@ from neuron_choice import neuron_choice
 from utils import NAME_TO_COMBO
 
 def get_mean_values(args):
-    summary_dict = torch.load(args.means_path)
+    summary_dict = torch.load(args.means_path, device=args.device)
     relevant_gate_signs=[args.gate] if args.gate else ['+','-']
     relevant_post_signs=[args.post] if args.post and args.gate else ['+','-']
     relevant_cases_post = [
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     parser.add_argument('--wcos_dir', default='.')
     parser.add_argument(
         '--output_dir', default='intervention_results')
-    parser.add_argument('--means_path', default='neuroscope/results/7B_new/summary_refactored.pt')
+    parser.add_argument('--means_path', default='neuroscope/results/OLMo-7B-0424/summary_refactored.pt')
     parser.add_argument(
         '--model',
         default='allenai/OLMo-7B-0424-hf',
