@@ -40,7 +40,7 @@ if __name__=="__main__":
     parser.add_argument('--work_dir', default='.')
     parser.add_argument('--wcos_dir', default='.')
     parser.add_argument('--wiki_dir', default='wiki_data')
-    parser.add_argument('--means_path', default='neuroscope/results/7B_new/summary_refactored.pt')
+    parser.add_argument('--means_path', default='neuroscope/results/OLMo-7B-0424/summary_refactored.pt')
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     #parser.add_argument('--subject_repr_layer', default=40)
     #parser.add_argument('--num_block_layers', default=10)
@@ -75,6 +75,10 @@ if __name__=="__main__":
     parser.add_argument(
         '--post', default=None,
         help="ablate only when activation*cos(w_gate,w_in) has this sign ('+' or '-')"
+    )
+    parser.add_argument(
+        '--device', default=torch.device('cuda' if torch.cuda.is_available() else (
+            'mps' if torch.backends.mps.is_available() else 'cpu')), type=str,
     )
     parser.add_argument(
         '--subsets',
