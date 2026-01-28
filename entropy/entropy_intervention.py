@@ -197,6 +197,7 @@ def run_intervention_experiment(
         mean_values = torch.zeros((model.cfg.n_layers, model.cfg.d_mlp))
     else:
         assert mean_values is not None
+    print("> preparing hooks...")
     conditioning_values = {}
     hooks = []
     for lix, nix in neuron_subset:
@@ -210,6 +211,7 @@ def run_intervention_experiment(
         )
 
     hooks.append(('ln_final.hook_scale', save_layer_norm_scale_hook))
+    print(">done")
 
     #n, d = dataset['tokens'].shape
     n = dataset.num_rows
@@ -220,6 +222,7 @@ def run_intervention_experiment(
     rank_tensor = torch.zeros(n, d, dtype=torch.int32)
     scale_tensor = torch.zeros(n, d, dtype=torch.float16)
 
+    print(">preparing data loading...")
     data_collator = DataCollatorWithPadding(
         tokenizer=model.tokenizer,
         # padding='max_length',
@@ -231,6 +234,7 @@ def run_intervention_experiment(
         shuffle=False,
         collate_fn=data_collator,
     )
+    print(">done")
 
     offset = 0
     for step, batch in enumerate(tqdm.tqdm(dataloader)):

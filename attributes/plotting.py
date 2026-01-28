@@ -50,9 +50,10 @@ for name in all_subset_names:
     if name=='clean' or '_baseline' in name:
         continue
     plot_dir = f'{args.work_dir}/plots/ablations/{name}'
-    if os.path.exists(plot_dir):
+    fig_path = f'{plot_dir}/attributes_{args.intervention_type}.pdf'
+    if os.path.exists(fig_path):
         continue
-    os.makedirs(plot_dir)
+    os.makedirs(plot_dir, exist_ok=True)
     data=tmp[
         (tmp.top_k_preds_in_context > -1) &
         (tmp.neuron_subset_name.isin([name, name+'_baseline', 'clean'])) &
@@ -70,5 +71,5 @@ for name in all_subset_names:
                     )
     ax.set_xlabel("layer")
     ax.set_ylabel("attributes rate")
-    plt.savefig(f'{plot_dir}/attributes_{args.intervention_type}.pdf', bbox_inches='tight')
+    plt.savefig(fig_path, bbox_inches='tight')
     plt.close()
