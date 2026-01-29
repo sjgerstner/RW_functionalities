@@ -1,0 +1,22 @@
+Q: How to get the value of a variable in a function in PHP? I have a function that is called from a form.
+function get_value($var) {
+    $var = $_POST[$var];
+    return $var;
+}
+
+I want to get the value of the variable $var in the function.
+I tried this:
+$var = get_value('var');
+
+But it doesn't work.
+
+A: You can't do that.
+The function is called with a parameter, and the parameter is assigned to the variable.
+You can't access the variable outside the function.
+
+A: You can't do that.
+The function is called with a parameter, and the parameter is assigned to the variable.
+You can't access the variable outside the function.
+
+A: You can't do that.
+The function is called with a parameter, and the parameter

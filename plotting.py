@@ -3,13 +3,14 @@
 import itertools
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 import torch
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from utils import COMBO_TO_NAME
+from utils import COMBO_TO_NAME, VANILLA_CATEGORIES
 
 torch.set_grad_enabled(False)
 
@@ -43,6 +44,12 @@ CATEGORY_COLORS = {
 }
 CATEGORY_COLORS[(0,0,1)]=(0.9,0.9,0.9,1)
 
+VANILLA_COLORS = {
+    1: CATEGORY_COLORS[(1,1,1)],
+    0: CATEGORY_COLORS[(0,0,1)],
+    -1: CATEGORY_COLORS[(-1,1,1)],
+}
+
 SHORT_TO_LONG = {
     "gatelin":"$cos(w_{gate}, w_{in})$",
     "gateout":"$cos(w_{gate}, w_{out})$",
@@ -51,7 +58,7 @@ SHORT_TO_LONG = {
 }
 
 def my_survey(
-    results, model_name, names_and_colors=CATEGORY_COLORS
+    results:dict, model_name:str,
 ):
     """
     Parameters
@@ -67,11 +74,20 @@ def my_survey(
     category_colors: list of tuples of 4 floats
         The rgba colors corresponding to the categories
     """
+    if (1,1,1) in results.keys():
+        names_and_colors, combo_to_name = CATEGORY_COLORS, COMBO_TO_NAME
+        labels = [f'Layer {n}' for n in range(results[(1,1,1)].numel())]#[0,...,31] if 32 layers
+    elif 1 in results.keys():
+        names_and_colors, combo_to_name = VANILLA_COLORS, VANILLA_CATEGORIES
+        labels = [f'Layer {n}' for n in range(results[1].numel())]#[0,...,31] if 32 layers
+    else:
+        raise NotImplementedError(
+            f"The dictionary keys do not seem to correspond to the categories we defined: \
+                {results.keys()}"
+        )
     #my preprocessing:
     # labels = list(results.keys())
     # data = np.array(list(results.values()))
-    labels = list(range(results[(1,1,1)].numel()))#[0,...,31] if 32 layers
-    labels = [f'Layer {n}' for n in labels]
     data = np.array(torch.stack(list(results.values()), dim=-1).cpu())
 
     data_cum = data.cumsum(axis=1)#cumsum over categories
@@ -89,7 +105,7 @@ def my_survey(
         starts = data_cum[:, i] - widths
         rects = ax.barh(labels, widths, left=starts,
                         #height=0.5,
-                        label=COMBO_TO_NAME[key], color=color)
+                        label=combo_to_name[key], color=color)
         if any(widths>700):
             r, g, b, _ = color
             text_color = 'black' if (r>.5 or g>.5) else 'white'#TODO
@@ -107,7 +123,12 @@ def my_survey(
 
     return fig, ax
 
-def wcos_plot(data, layer_list, arrangement, model_name):
+def wcos_plot(data, layer_list, arrangement):
+    if "gateout" in data:
+        return wcos_scatter(data, layer_list, arrangement)
+    return wcos_vanilla(data, layer_list)
+
+def wcos_scatter(data, layer_list, arrangement):
     fig, axs = plt.subplots(arrangement[0], arrangement[1],
                         sharex=True,
                         sharey=True,
@@ -181,33 +202,90 @@ def wcos_plot(data, layer_list, arrangement, model_name):
 
     return fig, axs
 
-def plot_boxplots(data, model_name):
-    n_layers = data['gatelin'].shape[0]
+def wcos_vanilla(data:dict[str,torch.Tensor], layer_list:list[int]):
+    """Strip plot of weight cosines by layer, for vanilla activation functions.
+
+    Args:
+        data (dict[str,torch.Tensor]):
+            only relevant key is "linout", where the value is a tensor of shape (layer,neuron)
+        layer_list (list[int]): list of layers to include in the plot
+
+    Returns:
+        fig, ax
+    """
+    fig, ax = plt.subplots()
+    fig.set_figwidth(6.75)
+    fig.set_figheight(4.5)
+    ax.set_ylim(-1.,1.)
+    df = pd.DataFrame.from_records(
+        [
+            {
+                "layer": layer,
+                "neuron": neuron,
+                SHORT_TO_LONG["linout"]: data["linout"][layer,neuron].item()
+            }
+            for layer in layer_list for neuron in range(data["linout"].shape[-1])
+        ]
+    )
+    #TODO randomness regions
+    sns.histplot(
+        df, x="layer", y=SHORT_TO_LONG["linout"],
+        cbar=True,
+        bins=(len(layer_list), 100),
+        discrete=(True,False),
+        cbar_kws={'orientation': 'vertical', 'pad':0.02, 'label':'number of neurons'}
+    )
+    return fig, ax
+
+def plot_boxplots(data:dict[str,torch.Tensor], model_name:str, layer_list:list[int]|range|None=None):
+    if layer_list is None:
+        layer_list = range(data['linout'].shape[0])
+    #n_layers = data['gatelin'].shape[0] if layer_list is None else len(layer_list)
+    n_neurons = data["linout"].shape[-1]
     fig, axs = plt.subplots(
-        nrows=3,
+        nrows=3 if "gateout" in data else 1,
         ncols=1,
         sharex=True,
     )
     fig.set_figwidth(6.75)
     fig.set_figheight(4.5)
-    for i, (k,v) in enumerate(SHORT_TO_LONG.items()):
-        if k not in data:
+    df = pd.DataFrame.from_records(
+        [
+            {
+                "layer": layer,
+                "neuron": neuron,
+            }
+            for layer in layer_list for neuron in range(n_neurons)
+        ]
+    )
+    for i, (short,long) in enumerate(SHORT_TO_LONG.items()):
+        current_ax = axs[i] if "gate" in data else axs
+        if short not in data:
             continue
-        mydata = data[k]
-        if 'gate' in k:
+        mydata = data[short]
+        if short=="gatelin":
             mydata = torch.abs(mydata)
-            v = '$|' + v.strip('$') + '|$'
-            axs[i].set_ylim(0.,1.)
+            long = '$|' + long.strip('$') + '|$'
+            current_ax.set_ylim(0.,1.)
         else:
-            axs[i].set_ylim(-1.,1.)
+            current_ax.set_ylim(-1.,1.)
+        df[long]=[
+            mydata[layer,neuron].item()
+            for layer in layer_list for neuron in range(n_neurons)
+        ]
         #zero-based indexing for consistency
-        axs[i].boxplot(
-            mydata.T,
-            tick_labels=[str(i) for i in range(n_layers)],
-            flierprops={'rasterized':True},
+        # axs[i].boxplot(
+        #     mydata.T,
+        #     tick_labels=[str(i) for i in range(n_layers)],
+        #     flierprops={'rasterized':True},
+        # )
+        sns.boxenplot(
+            data=df, x="layer", y=long,
+            ax=current_ax,
         )
-        axs[i].set_ylabel(v, fontsize=10)
-    fig.supxlabel('Layer', fontsize=10)
+        #TODO randomness regions
+        #axs[i].set_ylabel(v, fontsize=10)
+    #fig.supxlabel('Layer', fontsize=10)
     fig.suptitle(model_name, fontsize=10)
     return fig, axs
 
@@ -296,7 +374,8 @@ def _freq_sim_scatter(ax, data, x, y, title, cbar=True,
         data, x=x, y=y, ax=ax, cbar=cbar, bins=100,
         weights=weights, vmax=vmax,
         cbar_ax=cbar_ax,
-        cbar_kws={'orientation': 'vertical', 'pad':0.02}
+        cbar_kws={'orientation': 'vertical', 'pad':0.02},
+        rasterized=True,
     )
     # label the colorbar
     #cbar = sns_plot.collections[0].colorbar
@@ -396,7 +475,7 @@ def freq_sim_scatter(
     #fig.tight_layout(rect=[0, 0, .9, 1])
     plt.savefig(
         savefile,
-        dpi=150,
+        #dpi=150,
         bbox_inches='tight',
     )
 

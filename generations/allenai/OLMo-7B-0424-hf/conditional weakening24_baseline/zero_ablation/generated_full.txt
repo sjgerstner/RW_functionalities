@@ -1,0 +1,29 @@
+<issue_start><issue_comment>Title: Update event-based detection to 1.0 beta3
+username_0: Thanks contributing to mbed-os-tools!
+
+**Do not update the submodules.**
+Please, pass the necessary updates using the `sync submodules` script in.github folder.
+
+# ACL
+
+Check the ACL for the repository settings.
+Either automatically fetch the ACL from GitHub or [request a manual ACL check](https://github.com/ARMmbed/mbed-os-tools/blob/master/reports/check-acl_arm-mbed-cli-auto.md).
+
+# PR Checklist
+
+- [x] `sync submodules`
+- [ ] Elaborate on first PR template title
+- [ ] Squalumi improvements
+- [ ] Correction to `mbed-os-tools/reports/check-manifest` and advanced template usage
+    - `@ibexdevteam/update-event-based-detection`
+- [x] Reset the stored manifest in reported to the release/latest tag by `update-binary.sh`
+<!--
+## Labels
+
+Assignment: Apply the following labels to the PR depending on its status:
+- ready for review
+- in progress
+- await review
+
+To add a label, select it and press Ctrl + Enter.
+-->

@@ -8,7 +8,7 @@ import torch
 from plotting import aligned_histograms
 
 #%%
-def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation'):
+def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation')->torch.Tensor:
     #print('loading data...')
     baseline = torch.load(
         f'{data_path}/baseline/None_None/{metric}.pt',
@@ -18,11 +18,21 @@ def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='z
         f'{data_path}/{neuron_subset_name}/{intervention_type}_None/{metric}.pt',
         weights_only=True
     )#sample pos
+    if baseline.shape[0]!=ablated.shape[0]:
+        #for some reason an earlier version of dolma-small had 45734 rows
+        # while the new version has 45736.
+        # But (I'm pretty sure) the rows are in the same order,
+        # so it should be possible to just remove the last two from the longer version
+        min_shape = min(baseline.shape[0], ablated.shape[0])
+        baseline = baseline[:min_shape]
+        ablated = ablated[:min_shape]
     #print('computing difference...')
     if metric=='scale':
-        diff = baseline / ablated
-    else:
-        diff = baseline - ablated
+        baseline = torch.log(baseline)
+        ablated = torch.log(ablated)
+        #diff = baseline / ablated
+    #else:
+    diff = baseline - ablated
     return diff
 
 def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation'):
@@ -48,7 +58,7 @@ def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_
     return diff_nonzero
 
 def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation', **kwargs):
-    absrel = '/' if metric=='scale' else '-'
+    absrel = '-' #'/' if metric=='scale' else '-'
     data_path = f'{args.data_dir}/intervention_results/{args.model}/{args.dataset}'
     print('computing data...')
     diffs = {}
@@ -77,6 +87,7 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
         os.mkdir(experiment_dir)
     if args.log:
         kwargs["log"]=True
+    metric = "log_scale" if metric=='scale' else metric
     aligned_histograms(
         list_data,
         subtitles=subtitles,

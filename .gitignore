@@ -10,6 +10,7 @@ intervention_results/
 .vscode/
 adapt_df.py
 se/logitlens.pickle
+*.zip
 #for full anonymity:
 .gitmodules
 

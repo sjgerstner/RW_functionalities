@@ -5,19 +5,13 @@ from os.path import exists
 import random
 import torch
 
-from utils import COMBO_TO_NAME, is_in_category
+from utils import COMBO_TO_NAME, is_in_category, VANILLA_CATEGORIES
 
-# CATEGORY_NAMES = ["enrichment",
-#             "atypical enrichment",
-#             "conditional enrichment",
-#             "atypical conditional enrichment",
-#             "proportional change",
-#             "atypical proportional change",
-#             "orthogonal output",
-#             "depletion",
-#             "atypical depletion",
-#             "conditional depletion",
-#             "atypical conditional depletion"]
+def _key_to_name(category_key):
+    if isinstance(category_key, tuple):
+        return COMBO_TO_NAME[category_key]
+    else:
+        return VANILLA_CATEGORIES[category_key]
 
 def neuron_choice(args, category_key, subset=None, baseline=True):
     """
@@ -26,7 +20,7 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
 
     Args:
         args: arguments from argument parser
-        category_key (tuple): 
+        category_key (tuple or int): key for COMBO_TO_NAME or for the vanilla version
         d_mlp (int):
             number of neurons per layer of the model. Necessary when creating a random baseline.
         subset (None or float or int, default None): how many neurons to choose from the category.
@@ -49,7 +43,7 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
     data_path = f"{path}/data.pt"
     if not exists(data_path):
         data_path = f"{path}/refactored/data.pt"
-    data = torch.load(data_path)
+    data = torch.load(data_path, map_location=args.device)
     neuron_tensor = torch.nonzero(is_in_category(data['categories'],category_key))
     neuron_list = [tuple(line) for line in neuron_tensor]
     if subset is not None:
@@ -59,7 +53,8 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
         if subset<len(neuron_list):
             neuron_list = random.sample(neuron_list, subset)
         elif subset>len(neuron_list):
-            print(f"Warning: category {COMBO_TO_NAME[category_key]} only contains {len(neuron_list)} neurons.")
+            category_name = _key_to_name(category_key)
+            print(f"Warning: category {category_name} only contains {len(neuron_list)} neurons.")
             return None, None
     if baseline:
         #TODO adapt baseline to activation frequencies
@@ -96,16 +91,30 @@ def random_baseline(neuron_list, data_categories, category_key):
     for layer,number in enumerate(layer_counts):
         if number==0:
             continue
-        baseline_sublist = list(torch.nonzero(~is_in_category(data_categories[layer],category_key)))
+        baseline_sublist = torch.nonzero(
+                ~is_in_category(data_categories[layer:layer+1],category_key)#.flatten()
+            )[:,1].tolist()
         if number<d_mlp/2:
             baseline_sublist = random.sample(baseline_sublist, number)
         else:
+            category_name = _key_to_name(category_key)
             print(
-                f"Warning: category {COMBO_TO_NAME[category_key]} covers more than half of neurons",
+                f"Warning: category {category_name} covers more than half of neurons",
                 f"in layer {layer} ({number} of {d_mlp})"
             )
-        baseline_list.extend([(layer,neuron.item()) for neuron in baseline_sublist])
+        baseline_list.extend([(layer,neuron) for neuron in baseline_sublist])
     return baseline_list
+
+def get_n_neurons(args):
+    if args.by_freq:
+        n_neurons = int(args.n_neurons)
+        freq_data = pd.read_pickle(f'plots/freq/{args.by_freq}_means.pickle')
+        constant_freq = freq_data.loc[args.constant_class]["true"]
+        constant = constant_freq * n_neurons
+        return n_neurons, constant
+    if args.n_neurons:
+        return float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons), None
+    return None, None
 
 # def random_baseline_old(layer, category_index, data, other_neurons, d_mlp):
 #     """Unused!"""

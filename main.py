@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 import torch
 import einops
-from transformer_lens import HookedTransformer
+from transformer_lens import HookedTransformer, HookedEncoderDecoder
 from transformer_lens.loading_from_pretrained import OLMO_CHECKPOINTS_1B, OLMO_CHECKPOINTS_7B
 
 import plotting
@@ -53,39 +53,64 @@ MODEL_TO_CHECKPOINTS = {
     'allenai/OLMo-7B-0424-hf': OLMO_CHECKPOINTS_7B,
 }
 
-def _load_model_data(model_name, cache_dir=None, checkpoint_value=None, refactor_glu=True):
-    model = HookedTransformer.from_pretrained(
-        model_name,
-        checkpoint_value=checkpoint_value,
-        cache_dir=cache_dir,
-        local_files_only=True,#TODO you can change this to false if needed
-        device='cpu',
-        refactor_glu=refactor_glu,
-        ) #changed the transformer_lens code, don't disable fold_ln
+def _load_model(model_name, **kwargs):
+    if model_name.startswith("bert"):
+        model = HookedTransformer.from_pretrained_no_processing(#TODO change to HookedEncoder?
+            model_name, **kwargs,
+        )
+    elif model_name.startswith("t5"):
+        model = HookedEncoderDecoder.from_pretrained(
+            model_name, **kwargs,
+        )
+    else:
+        model = HookedTransformer.from_pretrained(
+            model_name,
+            **kwargs,
+        )
+    return model
 
+def _load_model_data(model_name, cache_dir=None, checkpoint_value=None, refactor_glu=True):
+    model_kwargs = {
+        "checkpoint_value":checkpoint_value,
+        "cache_dir":cache_dir,
+        "device":"cpu",
+    }
+    if not model_name.startswith("t5"):
+        model_kwargs["refactor_glu"]=refactor_glu
+    try:
+        model = _load_model(model_name, local_files_only=True, **model_kwargs)
+    except Exception as e:
+        print(
+            f"Need to fetch remote files for model {model_name}. Ignored the following error: {e}"
+        )
+        model = _load_model(model_name, local_files_only=False, **model_kwargs)
+
+    out_dict = {}
     #new shape: layer neuron model_dim
-    W_gate = einops.rearrange(model.W_gate.detach(), 'l d n -> l n d').to(DEVICE)
-    W_in = einops.rearrange(model.W_in.detach(), 'l d n -> l n d').to(DEVICE)
-    W_out = model.W_out.detach().to(DEVICE) #already has the shape we want
+    if hasattr(model, "W_gate") and model.W_gate is not None:
+        out_dict["W_gate"] = einops.rearrange(model.W_gate.detach(), 'l d n -> l n d').to(DEVICE)
+    out_dict["W_in"] = einops.rearrange(model.W_in.detach(), 'l d n -> l n d').to(DEVICE)
+    out_dict["W_out"] = model.W_out.detach().to(DEVICE) #already has the shape we want
     #sanity check,comment out
     #print(W_gate.shape, W_in.shape, W_out.shape)#should all be the same
 
-    d_model = model.cfg.d_model
+    out_dict["d_model"] = model.cfg.d_model
 
     del model
     gc.collect()
     torch.cuda.empty_cache()
 
-    return {"W_gate":W_gate, "W_in":W_in, "W_out":W_out, "d_model":d_model}
+    return out_dict
 
 def cosines(mlp_weights):
     """Compute weight cosines within each neuron of the given model
     and return result as a dict of three tensors (gatelin, linout, gateout),
     each of which is of shape (layer neuron)."""
-    gatelin = utils.cos(mlp_weights["W_gate"], mlp_weights["W_in"]).cpu() #don't overload the gpu
-    linout = utils.cos(mlp_weights["W_in"], mlp_weights["W_out"]).cpu()
-    gateout = utils.cos(mlp_weights["W_gate"], mlp_weights["W_out"]).cpu()
-    data = {"gatelin":gatelin, "linout":linout, "gateout":gateout, "d_model":mlp_weights["d_model"]}
+    data = {"d_model":mlp_weights["d_model"]}
+    data["linout"] = utils.cos(mlp_weights["W_in"], mlp_weights["W_out"]).cpu()
+    if "W_gate" in mlp_weights:
+        data["gatelin"] = utils.cos(mlp_weights["W_gate"], mlp_weights["W_in"]).cpu() #don't overload the gpu
+        data["gateout"] = utils.cos(mlp_weights["W_gate"], mlp_weights["W_out"]).cpu()
     return data
 
 def _load_data_if_exists(path):
@@ -151,28 +176,20 @@ def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
     if "categories" in args.experiments:# and 'categories' not in data:
         print("classifying neurons")
         data['categories'] = utils.compute_category(
-            gatelin=data['gatelin'].to(DEVICE),
-            gateout=data['gateout'].to(DEVICE),
-            linout=data['linout'].to(DEVICE)
+            # gatelin=data['gatelin'].to(DEVICE),
+            # gateout=data['gateout'].to(DEVICE),
+            # linout=data['linout'].to(DEVICE)
+            data=data, device=DEVICE,
             ) #layer neuron
     if "category_stats" in args.experiments:# and 'category_stats' not in data:
         print("category statistics")
         data['category_stats'] = utils.layerwise_count(data['categories'])
-    # if "quartiles" in args.experiments and 'quartiles' not in data:
-    #     print("quartiles")
-    #     q = torch.tensor([0,.25,.5,.75,1])
-    #     data['gatelin_quartiles'] = torch.quantile(data['gatelin'], q, dim=1)
-    #     data['gateout_quartiles'] = torch.quantile(data['gateout'], q, dim=1)
-    #     data['linout_quartiles'] = torch.quantile(data['linout'], q, dim=1)
-    #save results:
-    # for key in data:
-    #     data[key] = data[key].cpu()
     torch.save(data, f"{path}/data.pt")
     return data
 
 def _make_plots(args, data, model_name, path):
     """make plots"""
-    layers = data['gatelin'].shape[0]
+    layers = data['linout'].shape[0]
     #fine-grained / cosines
     if "plot_fine" in args.experiments:# and not os.path.exists(f"{path}/fine.pdf"):
         ncols = 4
@@ -180,7 +197,7 @@ def _make_plots(args, data, model_name, path):
             data,
             range(layers),
             arrangement = (int(np.ceil(layers/ncols)), ncols),
-            model_name=model_name
+            # model_name=model_name
         )
         fig.savefig(
             f"{path}/fine.pdf",
@@ -194,7 +211,7 @@ def _make_plots(args, data, model_name, path):
             data,
             args.selected_layers,
             arrangement= (1, len(args.selected_layers)),
-            model_name=model_name,
+            # model_name=model_name,
         )
         fig.savefig(
             f"{path}/selected.pdf",
@@ -231,7 +248,7 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
         path
     )
     #cosines etc.
-    if ("linout" not in data) or ("randomness" not in data):
+    if ("linout" not in data) or (("randomness" in args.experiments) and "randomness" not in data):
         data = _get_basic_data(
             args, data, model_name, cache_dir=cache_dir, checkpoint_value=checkpoint_value
         )

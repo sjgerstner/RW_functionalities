@@ -1,0 +1,30 @@
+Q: How to get the value of a variable in a function in PHP? I have a function that returns a value. I want to use that value in another function.
+function get_value() {
+    $value = 'Hello';
+    return $value;
+}
+
+function get_value_2() {
+    $value = get_value();
+    echo $value;
+}
+
+get_value_2();
+
+I want to get the value of $value in the function get_value_2().
+
+A: You can use global keyword to access the variable in another function.
+function get_value() {
+    $value = 'Hello';
+    return $value;
+}
+
+function get_value_2() {
+    global $value;
+    echo $value;
+}
+
+get_value_2();
+
+
+A: You can use global keyword
