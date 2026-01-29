@@ -58,7 +58,7 @@ def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_
     return diff_nonzero
 
 def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation', **kwargs):
-    absrel = '/' if metric=='scale' else '-'
+    absrel = '-' #'/' if metric=='scale' else '-'
     data_path = f'{args.data_dir}/intervention_results/{args.model}/{args.dataset}'
     print('computing data...')
     diffs = {}
