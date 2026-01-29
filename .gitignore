@@ -11,6 +11,8 @@ intervention_results/
 adapt_df.py
 se/logitlens.pickle
 *.zip
+#for full anonymity:
+.gitmodules
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
