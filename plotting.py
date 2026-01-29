@@ -374,7 +374,8 @@ def _freq_sim_scatter(ax, data, x, y, title, cbar=True,
         data, x=x, y=y, ax=ax, cbar=cbar, bins=100,
         weights=weights, vmax=vmax,
         cbar_ax=cbar_ax,
-        cbar_kws={'orientation': 'vertical', 'pad':0.02}
+        cbar_kws={'orientation': 'vertical', 'pad':0.02},
+        rasterized=True,
     )
     # label the colorbar
     #cbar = sns_plot.collections[0].colorbar
@@ -474,7 +475,7 @@ def freq_sim_scatter(
     #fig.tight_layout(rect=[0, 0, .9, 1])
     plt.savefig(
         savefile,
-        dpi=150,
+        #dpi=150,
         bbox_inches='tight',
     )
 

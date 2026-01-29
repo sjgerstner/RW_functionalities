@@ -14,7 +14,7 @@ from utils import COMBO_TO_NAME
 
 parser = ArgumentParser()
 parser.add_argument('--work_dir', default='.')
-parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424-hf_dolma-small')
+parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424')
 parser.add_argument(
     '--wcos_dir',
     default='.',#'wcos_casestudies',
@@ -33,11 +33,12 @@ else:
     subexps = args.subexperiments
 
 #tensor of frequency by neuron
-SUMMARY_PATH = f'{args.work_dir}/neuroscope/results/{args.neuroscope_dir}/summary.pickle'
-#TODO change file path to pt when ready
-with open(SUMMARY_PATH, 'rb') as f:
-    summary_dict = pickle.load(f)
-freq_tensor = summary_dict[args.metric].cpu()#layer neuron
+SUMMARY_PATH = f'{args.work_dir}/neuroscope/results/{args.neuroscope_dir}/summary{"_refactored" if args.refactor_glu else ""}.pt'
+summary_dict = torch.load(SUMMARY_PATH)
+if args.metric in summary_dict:
+    freq_tensor = summary_dict[args.metric].cpu()#layer neuron
+else:
+    freq_tensor = summary_dict[('gate+_in+', 'freq')]+summary_dict[('gate+_in-', 'freq')]#TODO make it more flexible
 n_layers = freq_tensor.shape[0]
 d_mlp = freq_tensor.shape[1]
 
