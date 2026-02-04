@@ -55,11 +55,21 @@ SHORT_TO_LONG = {
     "gateout":"$cos(w_{gate}, w_{out})$",
     "linout":"$cos(w_{in}, w_{out})$",
     "summary_freq": "Frequency of gate>0",
-    "gate+_in+": "Frequency of gate>0, in>0",
-    "gate+_in-": "Frequency of gate>0, in<0",
-    "gate-_in+": "Frequency of gate<0, in>0",
-    "gate-_in-": "Frequency of gate<0, in<0",
+    "summary_sum": "Mean norm of output",
+    "freq": "Frequency of",
+    "sum": "Mean norm of output when",
+    "gate+_in+": "gate>0, in>0",
+    "gate+_in-": "gate>0, in<0",
+    "gate-_in+": "gate<0, in>0",
+    "gate-_in-": "gate<0, in<0",
 }
+
+def _short_to_long(key:str)->str:
+    if key in SHORT_TO_LONG:
+        return SHORT_TO_LONG[key]
+    keys = key.split('_')
+    combo, metric_type = '_'.join(keys[:-1]), keys[-1]
+    return f"{SHORT_TO_LONG[metric_type]} {SHORT_TO_LONG[combo]}"
 
 def my_survey(
     results:dict, model_name:str,
@@ -356,8 +366,9 @@ def _freq_sim_scatter(
     ax, data, x, y, title, cbar=True,
     cbar_ax=None,
     weighted=False, vmax=None,
-    #ylim=-1
-    lims=[-1,-1],
+    #ylim=-1,
+    # lower_lims=[-1,-1],
+    # upper_lims=[1,1],
 ):
     """
     "Scatter plot" (technically, a bivariate histogram)
@@ -408,17 +419,17 @@ def _freq_sim_scatter(
     )
     ax.legend(loc='upper right', fontsize='small')
 
-    ax.set_xlim(lims[0], 1)
-    ax.set_ylim(lims[1], 1)
     ax.grid(alpha=0.3, linestyle='--')
 
     #return ax
 
 def freq_sim_scatter(
-    data_by_layer, keys, arrangement,
+    data_by_layer:list[dict],
+    keys, arrangement,
     #suptitle,
     savefile, layer_list:list[int]|None=None,
     absolute=(False,False),
+    max_output:float|None=None,
 ):
     """
     A figure containing, for each layer, a "scatter plot" (technically, a bivariate histogram)
@@ -454,7 +465,7 @@ def freq_sim_scatter(
         arrangement[0], arrangement[1], #figsize=(12, 4),
         sharex=True, sharey=True,
         layout='constrained',
-    )
+    )#by default both x and y axis will show the interval (0,1).
     fig.set_figwidth(4*arrangement[1])
     fig.set_figheight(4*arrangement[0])
 
@@ -463,30 +474,39 @@ def freq_sim_scatter(
     else:
         axs_list = axes.ravel().tolist()
     cbar_ax = fig.add_axes([1, .03, .02, .91])
+    #set upper and lower limits. This will generalise to all axes thanks to sharex, sharey
+    lower_lims=[-1,-1]
+    for k in range(2):
+        if absolute[k]:
+            data[keys[k]] = torch.abs(data[keys[k]])
+            lower_lims[k]=0
+        elif torch.all(data[keys[k]]>=0):
+            lower_lims[k]=0
+    axs_list[0].set_xlim(xmin=lower_lims[0])
+    axs_list[0].set_ylim(ymin=lower_lims[1])
+    if 'sum' in keys[0]:
+        axs_list[0].set_xlim(xmax=max_output)
+    elif 'sum' in keys[1]:#we're assuming only one of the dimensions is unbounded
+        axs_list[0].set_ylim(ymax=max_output)
     for i, layer in enumerate(layer_list):
         data = data_by_layer[layer]
-        lims=[-1,-1]
-        for k in range(2):
-            if absolute[k]:
-                data[keys[k]] = torch.abs(data[keys[k]])
-                lims[k]=0
-            elif torch.all(data[keys[k]]>=0):
-                lims[k]=0
         # Show colour‑bar only on the last subplot
         show_cbar = i==len(layer_list)-1
         _freq_sim_scatter(
             ax=axs_list[i], data=data, x=keys[0], y=keys[1],
-            title=f'Layer {layer}', cbar=show_cbar, weighted=False,
+            title=f'Layer {layer}' if len(data_by_layer)>1 else None,
+            cbar=show_cbar, weighted=False,
             vmax=vmax,
             cbar_ax=cbar_ax if show_cbar else None,
             #ylim=ylim,
-            lims=lims,
+            # lower_lims=lower_lims,
+            # upper_lims=upper_lims,
         )
 
     # make y label larger
     fontsize=11.5
-    fig.supxlabel(SHORT_TO_LONG[keys[0]], fontsize=fontsize)
-    fig.supylabel(SHORT_TO_LONG[keys[1]], fontsize=fontsize)
+    fig.supxlabel(_short_to_long(keys[0]), fontsize=fontsize)
+    fig.supylabel(_short_to_long(keys[1]), fontsize=fontsize)
 
     #fig.suptitle(suptitle)
 
