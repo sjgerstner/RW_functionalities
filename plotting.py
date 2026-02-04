@@ -55,6 +55,10 @@ SHORT_TO_LONG = {
     "gateout":"$cos(w_{gate}, w_{out})$",
     "linout":"$cos(w_{in}, w_{out})$",
     "summary_freq": "Frequency of gate>0",
+    "gate+_in+": "Frequency of gate>0, in>0",
+    "gate+_in-": "Frequency of gate>0, in<0",
+    "gate-_in+": "Frequency of gate<0, in>0",
+    "gate-_in-": "Frequency of gate<0, in<0",
 }
 
 def my_survey(
@@ -348,10 +352,13 @@ def aligned_histograms(
     fig.savefig(savefile, bbox_inches='tight')
     plt.close()
 
-def _freq_sim_scatter(ax, data, x, y, title, cbar=True,
-                     cbar_ax=None,
-                     weighted=False, vmax=None,
-                     ylim=-1):
+def _freq_sim_scatter(
+    ax, data, x, y, title, cbar=True,
+    cbar_ax=None,
+    weighted=False, vmax=None,
+    #ylim=-1
+    lims=[-1,-1],
+):
     """
     "Scatter plot" (technically, a bivariate histogram)
     of sparsity (x) vs in_out_sim (y).
@@ -401,14 +408,17 @@ def _freq_sim_scatter(ax, data, x, y, title, cbar=True,
     )
     ax.legend(loc='upper right', fontsize='small')
 
-    ax.set_xlim(-0.02, 1)
-    ax.set_ylim(ylim, 1)
+    ax.set_xlim(lims[0], 1)
+    ax.set_ylim(lims[1], 1)
     ax.grid(alpha=0.3, linestyle='--')
 
-    return ax
+    #return ax
 
 def freq_sim_scatter(
-    data_by_layer, keys, arrangement, suptitle, savefile, layer_list=None, absy=False,
+    data_by_layer, keys, arrangement,
+    #suptitle,
+    savefile, layer_list:list[int]|None=None,
+    absolute=(False,False),
 ):
     """
     A figure containing, for each layer, a "scatter plot" (technically, a bivariate histogram)
@@ -427,13 +437,17 @@ def freq_sim_scatter(
         n_layers = len(layer_list)
     else:
         n_layers = len(data_by_layer)
-        layer_list = range(n_layers)
+        layer_list = list(range(n_layers))
 
     #precompute vmax
     vmaxs = np.zeros(n_layers)
     for i,layer in enumerate(layer_list):
         data = data_by_layer[layer]
-        vmaxs[i] = (np.max(np.histogram2d(data[keys[0]], data[keys[1]], bins=100)[0]))
+        vmaxs[i] = (np.max(
+            np.histogram2d(
+                data[keys[0]], data[keys[1]], bins=100
+            )[0]
+        ))
     vmax = np.max(vmaxs)
 
     fig, axes = plt.subplots(
@@ -451,18 +465,22 @@ def freq_sim_scatter(
     cbar_ax = fig.add_axes([1, .03, .02, .91])
     for i, layer in enumerate(layer_list):
         data = data_by_layer[layer]
-        if absy:
-            data[keys[1]] = torch.abs(data[keys[1]])
-            ylim=0
-        else:
-            ylim=-1
-        cbar = i==len(layer_list)-1
-        axs_list[i] = _freq_sim_scatter(
-            axs_list[i], data, x=keys[0], y=keys[1],
-            title=f'Layer {layer}', cbar=cbar, weighted=False,
+        lims=[-1,-1]
+        for k in range(2):
+            if absolute[k]:
+                data[keys[k]] = torch.abs(data[keys[k]])
+                lims[k]=0
+            elif torch.all(data[keys[k]]>=0):
+                lims[k]=0
+        # Show colour‑bar only on the last subplot
+        show_cbar = i==len(layer_list)-1
+        _freq_sim_scatter(
+            ax=axs_list[i], data=data, x=keys[0], y=keys[1],
+            title=f'Layer {layer}', cbar=show_cbar, weighted=False,
             vmax=vmax,
-            cbar_ax=cbar_ax if cbar else None,
-            ylim=ylim,
+            cbar_ax=cbar_ax if show_cbar else None,
+            #ylim=ylim,
+            lims=lims,
         )
 
     # make y label larger
@@ -470,7 +488,7 @@ def freq_sim_scatter(
     fig.supxlabel(SHORT_TO_LONG[keys[0]], fontsize=fontsize)
     fig.supylabel(SHORT_TO_LONG[keys[1]], fontsize=fontsize)
 
-    fig.suptitle(suptitle)
+    #fig.suptitle(suptitle)
 
     #fig.tight_layout(rect=[0, 0, .9, 1])
     plt.savefig(

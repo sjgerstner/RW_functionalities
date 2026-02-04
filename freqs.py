@@ -1,7 +1,6 @@
 from argparse import ArgumentParser
 from itertools import chain
 import os
-import pickle
 
 import numpy as np
 import pandas as pd
@@ -22,7 +21,7 @@ parser.add_argument(
 parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
 parser.add_argument('--refactor_glu', action='store_true')
 parser.add_argument('--log', action='store_true')
-parser.add_argument('--metric', default='summary_freq')#TODO support for other metrics
+parser.add_argument('--metric', default='summary_freq')
 parser.add_argument('--subexperiments', nargs='+', default=['all'])
 parser.add_argument('--layer_list', nargs='+', default=[0, 15, 31], type=int)
 args = parser.parse_args()
@@ -35,10 +34,12 @@ else:
 #tensor of frequency by neuron
 SUMMARY_PATH = f'{args.work_dir}/neuroscope/results/{args.neuroscope_dir}/summary{"_refactored" if args.refactor_glu else ""}.pt'
 summary_dict = torch.load(SUMMARY_PATH)
-if args.metric in summary_dict:
-    freq_tensor = summary_dict[args.metric].cpu()#layer neuron
+if (args.metric, 'freq') in summary_dict:
+    freq_tensor = summary_dict[(args.metric, 'freq')].cpu()#layer neuron
+elif args.metric=='summary_freq':
+    freq_tensor = summary_dict[('gate+_in+', 'freq')]+summary_dict[('gate+_in-', 'freq')]
 else:
-    freq_tensor = summary_dict[('gate+_in+', 'freq')]+summary_dict[('gate+_in-', 'freq')]#TODO make it more flexible
+    raise NotImplementedError
 n_layers = freq_tensor.shape[0]
 d_mlp = freq_tensor.shape[1]
 
@@ -149,21 +150,21 @@ if "scatter_plots" in subexps or "selected" in subexps:
     NCOLS = 4
     if "scatter_plots" in subexps:
         for sim in SIMS:
-            absy = sim=="gatelin"
+            absolute = (sim=="gatelin", True)
             freq_sim_scatter(
                 data_by_layer,
-                (args.metric, sim),
-                (int(np.ceil(n_layers/NCOLS)), NCOLS),
-                suptitle = f"{SHORT_TO_LONG[args.metric]} vs. {SHORT_TO_LONG[sim]} in {args.model}",
+                keys=(sim, args.metric),
+                arrangement=(int(np.ceil(n_layers/NCOLS)), NCOLS),
+                #suptitle = f"{SHORT_TO_LONG[args.metric]} vs. {SHORT_TO_LONG[sim]} in {args.model}",
                 savefile=f'{PLOT_DIR}/{args.metric}_{sim}.pdf',
-                absy=absy,
+                absolute=absolute,
             )
     if "selected" in subexps:
         freq_sim_scatter(
             data_by_layer,
-            (args.metric, "linout"),
+            keys=("linout", args.metric),
             arrangement = (1, len(args.layer_list)),
-            suptitle = f"{SHORT_TO_LONG[args.metric]} vs. {SHORT_TO_LONG["linout"]} in {args.model}",
+            #suptitle = f"{SHORT_TO_LONG[args.metric]} vs. {SHORT_TO_LONG["linout"]} in {args.model}",
             savefile = f'{PLOT_DIR}/{args.metric}_linout_selected.pdf',
-            layer_list=args.layer_list,
+            layer_list=args.layer_list if isinstance(args.layer_list, list) else [args.layer_list],
         )
