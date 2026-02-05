@@ -23,6 +23,7 @@ DEVICE='cuda:0'
 EXPERIMENT_LIST = [
     "beta",
     "randomness", #compute 95 percent randomness regions (95 percent of 'mismatched' weight cosines are in this region)
+    "norms", #norms of weight vectors
     "categories", #categorize the neurons
     "category_stats",#compute statistics of RW classes by layer
     #"quartiles",#compute quartiles of cosine similarities (by layer)
@@ -32,6 +33,7 @@ EXPERIMENT_LIST = [
     "plot_boxplots",#make boxplots of cosine similarities by layer
     "plot_all_medians",#make one plot with the median cos(w_in,w_out) similarities (y) across layers (x) of all models (one line per model)
     "plot_selected_medians",
+    "plot_norms",
 ]
 MODEL_LIST = [
     "allenai/OLMo-7B-0424-hf",
@@ -151,6 +153,13 @@ def _load_data_if_exists(path):
 #         data = cosines(model_data)
 #     return data
 
+def _norm_data(model_data, data_to_write):
+    data_to_write["norm_gate"] = torch.linalg.vector_norm(model_data["W_gate"], dim=-1)
+    data_to_write["norm_in"] = torch.linalg.vector_norm(model_data["W_in"], dim=-1)
+    data_to_write["norm_out"] = torch.linalg.vector_norm(model_data["W_out"], dim=-1)
+    data_to_write["norm_in_out"] = data_to_write["norm_in"]*data_to_write["norm_out"]
+    return data_to_write    
+
 def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=None):
     model_data = _load_model_data(
         model_name,
@@ -166,6 +175,9 @@ def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=Non
     if "randomness" in args.experiments and "randomness" not in data:
         print("computing layer-specific randomness regions")
         data["randomness"] = utils.randomness_regions(model_data)
+    if "norms" in args.experiments and "norm_gate" not in data:
+        print("computing norms of weight vectors")
+        data = _norm_data(model_data=model_data, data_to_write=data)
     return data
 
 def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
@@ -190,21 +202,28 @@ def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
 def _make_plots(args, data, model_name, path):
     """make plots"""
     layers = data['linout'].shape[0]
-    #fine-grained / cosines
-    if "plot_fine" in args.experiments:# and not os.path.exists(f"{path}/fine.pdf"):
+    if "plot_fine" in args.experiments or "plot_norms" in args.experiments:
         ncols = 4
-        fig, _ax = plotting.wcos_plot(
-            data,
-            range(layers),
-            arrangement = (int(np.ceil(layers/ncols)), ncols),
-            # model_name=model_name
-        )
-        fig.savefig(
-            f"{path}/fine.pdf",
-            bbox_inches='tight',
-            #dpi=400
-        )
-        plt.close()
+        arrangement = (int(np.ceil(layers/ncols)), ncols)
+        #fine-grained / cosines
+        if "plot_fine" in args.experiments:# and not os.path.exists(f"{path}/fine.pdf"):
+            fig, _ax = plotting.wcos_plot(
+                data,
+                range(layers),
+                arrangement = arrangement,
+                # model_name=model_name
+            )
+            fig.savefig(
+                f"{path}/fine.pdf",
+                bbox_inches='tight',
+                #dpi=400
+            )
+            plt.close()
+        #norms of weight vectors
+        if "plot_norms" in args.experiments:
+            fig, _ax = plotting.plot_norms(data, arrangement=arrangement)
+            fig.savefig(f"{path}/norms.pdf", bbox_inches="tight")
+            plt.close()
     #fine-grained / cosines for selected layers of selected model
     if "plot_selected" in args.experiments and model_name==args.selected_model:
         fig, _ax = plotting.wcos_plot(
@@ -248,7 +267,11 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
         path
     )
     #cosines etc.
-    if ("linout" not in data) or (("randomness" in args.experiments) and "randomness" not in data):
+    if (
+        ("linout" not in data)
+        or (("randomness" in args.experiments) and "randomness" not in data)
+        or (("norms" in args.experiments) and "norm_gate" not in data)
+    ):
         data = _get_basic_data(
             args, data, model_name, cache_dir=cache_dir, checkpoint_value=checkpoint_value
         )

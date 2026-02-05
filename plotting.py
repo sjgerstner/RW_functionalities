@@ -62,6 +62,8 @@ SHORT_TO_LONG = {
     "gate+_in-": "gate>0, in<0",
     "gate-_in+": "gate<0, in>0",
     "gate-_in-": "gate<0, in<0",
+    "norm_gate": "$norm(w_{gate})$",
+    "norm_in_out": "$norm(w_{in})*norm(w_{out})$"
 }
 
 def _short_to_long(key:str)->str:
@@ -366,6 +368,7 @@ def _freq_sim_scatter(
     ax, data, x, y, title, cbar=True,
     cbar_ax=None,
     weighted=False, vmax=None,
+    fit_line=True,
     #ylim=-1,
     # lower_lims=[-1,-1],
     # upper_lims=[1,1],
@@ -408,16 +411,17 @@ def _freq_sim_scatter(
     ax.set_xlabel('')
     ax.set_title(title)
 
-    #corr = np.corrcoef(data[x], data[y])[0, 1]
-    m, b = np.polyfit(data[x], data[y], 1)
-    corr_and_p = stats.pearsonr(data[x], data[y])
+    if fit_line:
+        #corr = np.corrcoef(data[x], data[y])[0, 1]
+        m, b = np.polyfit(data[x], data[y], 1)
+        corr_and_p = stats.pearsonr(data[x], data[y])
 
-    p_string = "p<0.01" if corr_and_p.pvalue<0.01 else f"p: {corr_and_p.pvalue:.2f}"
-    ax.plot(
-        data[x], m*data[x] + b, color='red', lw=0.8,alpha=0.8,
-        label=f'corr: {corr_and_p.correlation:.2f}\n{p_string}'
-    )
-    ax.legend(loc='upper right', fontsize='small')
+        p_string = "p<0.01" if corr_and_p.pvalue<0.01 else f"p: {corr_and_p.pvalue:.2f}"
+        ax.plot(
+            data[x], m*data[x] + b, color='red', lw=0.8,alpha=0.8,
+            label=f'corr: {corr_and_p.correlation:.2f}\n{p_string}'
+        )
+        ax.legend(loc='upper right', fontsize='small')
 
     ax.grid(alpha=0.3, linestyle='--')
 
@@ -427,9 +431,10 @@ def freq_sim_scatter(
     data_by_layer:list[dict],
     keys, arrangement,
     #suptitle,
-    savefile, layer_list:list[int]|None=None,
+    savefile=None, layer_list:list[int]|None=None,
     absolute=(False,False),
-    max_output:float|None=None,
+    max_output:tuple[float|None,float|None]=(None,None),
+    fit_line=True,
 ):
     """
     A figure containing, for each layer, a "scatter plot" (technically, a bivariate histogram)
@@ -484,10 +489,10 @@ def freq_sim_scatter(
             lower_lims[k]=0
     axs_list[0].set_xlim(xmin=lower_lims[0])
     axs_list[0].set_ylim(ymin=lower_lims[1])
-    if 'sum' in keys[0]:
-        axs_list[0].set_xlim(xmax=max_output)
-    elif 'sum' in keys[1]:#we're assuming only one of the dimensions is unbounded
-        axs_list[0].set_ylim(ymax=max_output)
+    if max_output[0]:
+        axs_list[0].set_xlim(xmax=max_output[0])
+    if max_output[1]:
+        axs_list[0].set_ylim(ymax=max_output[1])
     for i, layer in enumerate(layer_list):
         data = data_by_layer[layer]
         # Show colour‑bar only on the last subplot
@@ -498,9 +503,7 @@ def freq_sim_scatter(
             cbar=show_cbar, weighted=False,
             vmax=vmax,
             cbar_ax=cbar_ax if show_cbar else None,
-            #ylim=ylim,
-            # lower_lims=lower_lims,
-            # upper_lims=upper_lims,
+            fit_line=fit_line,
         )
 
     # make y label larger
@@ -510,12 +513,29 @@ def freq_sim_scatter(
 
     #fig.suptitle(suptitle)
 
-    #fig.tight_layout(rect=[0, 0, .9, 1])
-    plt.savefig(
-        savefile,
-        #dpi=150,
-        bbox_inches='tight',
+    if savefile:
+        plt.savefig(
+            savefile,
+            #dpi=150,
+            bbox_inches='tight',
+        )
+    return fig, axes
+
+def plot_norms(data, arrangement, layer_list:list[int]|None=None):
+    data_by_layer = [
+        {key:data[key][layer].cpu() for key in ["norm_gate", "norm_in_out"]}
+        for layer in range(data["norm_gate"].shape[0])
+    ]
+    max_output = (torch.max(data["norm_gate"]).item(), torch.max(data["norm_in_out"]).item())
+    fig, axes = freq_sim_scatter(
+        data_by_layer=data_by_layer,
+        keys=("norm_gate", "norm_in_out"),
+        arrangement=arrangement,
+        layer_list=layer_list,
+        max_output=max_output,
+        fit_line=False,
     )
+    return fig, axes
 
 # def _plot_class_changes(ax, pair_to_nchanges_dict):
 #     mat = np.full((11,11), np.nan)
