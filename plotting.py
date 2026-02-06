@@ -557,6 +557,24 @@ def plot_norms(data, arrangement, layer_list:list[int]|None=None):
     )
     return fig, axes
 
+def plot_cosines_vs_norms(data, keys, arrangement, layer_list:list[int]|None=None):
+    data_by_layer = [
+        {key:data[key][layer].cpu() for key in keys}
+        for layer in range(data[keys[0]].shape[0])
+    ]
+    max_output = (None, torch.max(data[keys[1]]).item())
+    min_output = (None, torch.min(data[keys[1]]).item())
+    fig, axes = freq_sim_scatter(
+        data_by_layer=data_by_layer,
+        keys=keys,
+        arrangement=arrangement,
+        layer_list=layer_list,
+        max_output=max_output,
+        min_output=min_output,
+        fit_line=False,
+    )
+    return fig, axes
+
 # def _plot_class_changes(ax, pair_to_nchanges_dict):
 #     mat = np.full((11,11), np.nan)
 #     for key in pair_to_nchanges_dict:

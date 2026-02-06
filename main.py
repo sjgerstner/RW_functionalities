@@ -34,6 +34,7 @@ EXPERIMENT_LIST = [
     "plot_all_medians",#make one plot with the median cos(w_in,w_out) similarities (y) across layers (x) of all models (one line per model)
     "plot_selected_medians",
     "plot_norms",
+    "plots_cosines_vs_norms",
 ]
 MODEL_LIST = [
     "allenai/OLMo-7B-0424-hf",
@@ -202,7 +203,8 @@ def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
 def _make_plots(args, data, model_name, path):
     """make plots"""
     layers = data['linout'].shape[0]
-    if "plot_fine" in args.experiments or "plot_norms" in args.experiments:
+    arrangement_needeed = any(s in args.experiments for s in ["plot_fine", "plots_norms", "plot_cosines_vs_norms"])
+    if arrangement_needeed:
         ncols = 4
         arrangement = (int(np.ceil(layers/ncols)), ncols)
         #fine-grained / cosines
@@ -224,6 +226,13 @@ def _make_plots(args, data, model_name, path):
             fig, _ax = plotting.plot_norms(data, arrangement=arrangement)
             fig.savefig(f"{path}/norms.pdf", bbox_inches="tight")
             plt.close()
+        #cosines vs norms
+        if "plot_cosines_vs_norms" in args.experiments:
+            for cosine_key in ["linout", "gateout", "gatelin"]:
+                for norms in ["norm_gate", "norm_in_out"]:
+                    fig, _ax = plotting.plot_cosines_vs_norms(data, arrangement=arrangement, keys=(cosine_key, norms))
+                    fig.savefig(f"{path}/{cosine_key}_{norms}.pdf", bbox_inches="tight")
+                    plt.close()
     #fine-grained / cosines for selected layers of selected model
     if "plot_selected" in args.experiments and model_name==args.selected_model:
         fig, _ax = plotting.wcos_plot(
