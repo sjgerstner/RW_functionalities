@@ -369,6 +369,7 @@ def _freq_sim_scatter(
     cbar_ax=None,
     weighted=False, vmax=None,
     fit_line=True,
+    **kwargs,
     #ylim=-1,
     # lower_lims=[-1,-1],
     # upper_lims=[1,1],
@@ -397,6 +398,7 @@ def _freq_sim_scatter(
         cbar_ax=cbar_ax,
         cbar_kws={'orientation': 'vertical', 'pad':0.02},
         rasterized=True,
+        **kwargs,
     )
     # label the colorbar
     #cbar = sns_plot.collections[0].colorbar
@@ -428,12 +430,13 @@ def _freq_sim_scatter(
     #return ax
 
 def freq_sim_scatter(
-    data_by_layer:list[dict],
+    data_by_layer:list[dict[str,torch.Tensor]],
     keys, arrangement,
     #suptitle,
     savefile=None, layer_list:list[int]|None=None,
     absolute=(False,False),
     max_output:tuple[float|None,float|None]=(None,None),
+    min_output:tuple[float|None,float|None]=(None,None),
     fit_line=True,
 ):
     """
@@ -455,17 +458,6 @@ def freq_sim_scatter(
         n_layers = len(data_by_layer)
         layer_list = list(range(n_layers))
 
-    #precompute vmax
-    vmaxs = np.zeros(n_layers)
-    for i,layer in enumerate(layer_list):
-        data = data_by_layer[layer]
-        vmaxs[i] = (np.max(
-            np.histogram2d(
-                data[keys[0]], data[keys[1]], bins=100
-            )[0]
-        ))
-    vmax = np.max(vmaxs)
-
     fig, axes = plt.subplots(
         arrangement[0], arrangement[1], #figsize=(12, 4),
         sharex=True, sharey=True,
@@ -479,22 +471,47 @@ def freq_sim_scatter(
     else:
         axs_list = axes.ravel().tolist()
     cbar_ax = fig.add_axes([1, .03, .02, .91])
-    #set upper and lower limits. This will generalise to all axes thanks to sharex, sharey
+    # Set upper and lower limits,
+    # and log scale if necessary.
+    # This will generalise to all axes thanks to sharex, sharey
     lower_lims=[-1,-1]
+    log_scale=[False,False]
     for k in range(2):
-        if absolute[k]:
-            data[keys[k]] = torch.abs(data[keys[k]])
-            lower_lims[k]=0
-        elif torch.all(data[keys[k]]>=0):
-            lower_lims[k]=0
+        if absolute[k] or torch.all(data_by_layer[0][keys[k]]>=0):
+            if max_output[k]:
+                log_scale[k]=True
+                assert min_output is not None
+                assert isinstance(min_output[k],float)
+                lower_lims[k]=max(min_output[k],1e-6)
+            else:
+                lower_lims[k]=0
     axs_list[0].set_xlim(xmin=lower_lims[0])
     axs_list[0].set_ylim(ymin=lower_lims[1])
     if max_output[0]:
         axs_list[0].set_xlim(xmax=max_output[0])
     if max_output[1]:
         axs_list[0].set_ylim(ymax=max_output[1])
+
+    #precompute vmax
+    vmaxs = np.zeros(n_layers)
+    for i,layer in enumerate(layer_list):
+        data = {key:value.clone() for key,value in data_by_layer[layer].items()}
+        for k in range(2):
+            if log_scale[k]:
+                data[keys[k]] = torch.log(data[keys[k]])
+                data[keys[k]] = data[keys[k]][~torch.isnan(data[keys[k]])]
+        vmaxs[i] = (np.max(
+            np.histogram2d(
+                data[keys[0]], data[keys[1]], bins=100,
+            )[0]
+        ))
+    vmax = np.max(vmaxs)
+
     for i, layer in enumerate(layer_list):
         data = data_by_layer[layer]
+        for k in range(2):
+            if absolute[k]:
+                data[keys[k]] = torch.abs(data[keys[k]])
         # Show colour‑bar only on the last subplot
         show_cbar = i==len(layer_list)-1
         _freq_sim_scatter(
@@ -504,6 +521,7 @@ def freq_sim_scatter(
             vmax=vmax,
             cbar_ax=cbar_ax if show_cbar else None,
             fit_line=fit_line,
+            log_scale=log_scale,
         )
 
     # make y label larger
@@ -527,12 +545,14 @@ def plot_norms(data, arrangement, layer_list:list[int]|None=None):
         for layer in range(data["norm_gate"].shape[0])
     ]
     max_output = (torch.max(data["norm_gate"]).item(), torch.max(data["norm_in_out"]).item())
+    min_output = (torch.min(data["norm_gate"]).item(), torch.min(data["norm_in_out"]).item())
     fig, axes = freq_sim_scatter(
         data_by_layer=data_by_layer,
         keys=("norm_gate", "norm_in_out"),
         arrangement=arrangement,
         layer_list=layer_list,
         max_output=max_output,
+        min_output=min_output,
         fit_line=False,
     )
     return fig, axes
