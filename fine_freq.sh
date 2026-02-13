@@ -8,6 +8,6 @@ for combo in "summary" "gate+_in+" "gate+_in-" "gate-_in+" "gate-_in-"; do
     --refactor_glu \
     --combo $combo \
     --metric_type $metric_type \
-    --subexperiments scatter_plots selected \
+    --subexperiments scatter_plots selected all_layers norms \
     --layer_list 15
 done

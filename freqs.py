@@ -9,7 +9,7 @@ import torch
 from transformer_lens import HookedTransformer
 
 import neuron_choice
-from plotting import SHORT_TO_LONG, aligned_histograms, freq_sim_scatter
+from plotting import SHORT_TO_LONG, aligned_histograms, freq_sim_scatter, plot_any_vs_any
 from utils import COMBO_TO_NAME
 
 def load_wout_norms(model_name:str)->torch.Tensor:
@@ -58,7 +58,7 @@ if args.metric_type=='freq':
         data_tensor = summary_dict[('gate+_in+', 'freq')]+summary_dict[('gate+_in-', 'freq')]
     else:
         data_tensor = summary_dict[(args.combo, 'freq')]#layer neuron
-    max_output=None#dummy
+    #max_output=None#dummy
 elif args.metric_type=='sum':#actually means mean
     norm_wout = load_wout_norms(args.model)
     if args.combo=='summary':
@@ -73,7 +73,7 @@ elif args.metric_type=='sum':#actually means mean
     else:
         data_tensor = process_activation_data(summary_dict, args.combo, args.activation_location)
     data_tensor *= norm_wout #to make activations comparable across neurons
-    max_output = torch.max(data_tensor).item()
+    #max_output = torch.max(data_tensor).item()
 else:
     raise NotImplementedError(
         f"args.metric_type has to be one of 'freq' or 'sum', but was {args.metric_type}"
@@ -167,7 +167,7 @@ if "category_plots" in subexps or "table" in subexps:#not os.path.exists(CATEGOR
         )
 
 #scatter plots
-if "scatter_plots" in subexps or "selected" in subexps or "all_layers" in subexps:
+if any(s in subexps for s in ["scatter_plots", "selected", "all_layers", "norms"]):
     #tensor of category by neuron
     PATH = f"{args.work_dir}/{args.wcos_dir}/results/{args.model}/refactored"
     data = torch.load(f"{PATH}/data.pt")
@@ -179,46 +179,64 @@ if "scatter_plots" in subexps or "selected" in subexps or "all_layers" in subexp
     data[f'{args.combo}_{args.metric_type}'] = data_tensor
 
     #scatter plots
-    SIMS = ["linout", "gateout", "gatelin"]
-    data_by_layer = [
-        {
-            key:value[layer] for key,value in data.items()
-            if key in ["linout", "gateout", "gatelin", f'{args.combo}_{args.metric_type}']
-        }
-        for layer in range(n_layers)
-    ]
+    SIMS = []
+    if any(s in subexps for s in ["scatter_plots", "selected", "all_layers"]):
+        SIMS += ["linout", "gateout", "gatelin"]
+    if "norms" in subexps:
+        SIMS += ["norm_gate", "norm_in_out"]
     if "all_layers" in subexps:
-        data = {key:torch.cat([data_by_layer[layer][key] for layer in range(n_layers)]) for key in data_by_layer[0]}
+        flattened_data = {
+            key:torch.flatten(value)
+            for key,value in data.items()
+            if key in SIMS or key==f'{args.combo}_{args.metric_type}'
+        }
     NCOLS = 4
     for sim in SIMS:
-        absolute = (sim=="gatelin", True)
-        if "scatter_plots" in subexps:
-            freq_sim_scatter(
-                data_by_layer,
+        #absolute = (sim=="gatelin", None)
+        if "scatter_plots" in subexps or "norms" in subexps:
+            plot_any_vs_any(
+                data,
                 keys=(sim, f'{args.combo}_{args.metric_type}'),
                 arrangement=(int(np.ceil(n_layers/NCOLS)), NCOLS),
-                #suptitle = f"{SHORT_TO_LONG[args.combo]} vs. {SHORT_TO_LONG[sim]} in {args.model}",
+                bounded=(not sim.startswith('norm'), args.metric_type=='freq'),
+                #fit_line=True,
                 savefile=f'{PLOT_DIR}/{sim}.pdf',
-                absolute=absolute,
-                max_output=max_output,
             )
         if "all_layers" in subexps:
-            freq_sim_scatter(
-                [data],
+            plot_any_vs_any(
+                flattened_data,
                 keys=(sim, f'{args.combo}_{args.metric_type}'),
                 arrangement=(1,1),
-                #suptitle = f"{SHORT_TO_LONG[args.combo]} vs. {SHORT_TO_LONG[sim]} in {args.model}",
-                savefile=f'{PLOT_DIR}/{sim}_all_layers.pdf',
-                absolute=absolute,
-                max_output=max_output,
+                bounded=(not sim.startswith('norm'), args.metric_type=='freq'),
+                #fit_line=True,
+                savefile=f'{PLOT_DIR}/{sim}_all_layers.pdf'
             )
     if "selected" in subexps:
+        keys=("linout", f'{args.combo}_{args.metric_type}')
+        data_by_layer = [
+            {
+                key:data[key][layer] for key in keys
+            }
+            for layer in range(n_layers)
+        ]
+        max_output = (
+            None,
+            None if args.metric_type=='freq' else torch.max(data[keys[1]]).item()
+        )
+        min_output = (
+            None,
+            None if args.metric_type=='freq' else torch.min(data[keys[1]]).item()
+        )
+        # if args.metric_type=='sum':
+        #     print(max_output[1], type(max_output[1]))
+        #     print(min_output[1], type(min_output[1]))
         freq_sim_scatter(
             data_by_layer,
-            keys=("linout", f'{args.combo}_{args.metric_type}'),
+            keys=keys,
             arrangement = (1, len(args.layer_list)),
             #suptitle = f"{SHORT_TO_LONG[args.combo]} vs. {SHORT_TO_LONG["linout"]} in {args.model}",
-            savefile = f'{PLOT_DIR}/linout_selected.pdf',
+            savefile = f'{PLOT_DIR}/linout_{args.layer_list}.pdf',
             layer_list=args.layer_list if isinstance(args.layer_list, list) else [args.layer_list],
             max_output=max_output,
+            min_output=min_output,
         )

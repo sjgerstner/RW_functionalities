@@ -415,7 +415,7 @@ def _freq_sim_scatter(
 
     if fit_line:
         #corr = np.corrcoef(data[x], data[y])[0, 1]
-        m, b = np.polyfit(data[x], data[y], 1)
+        m, b = np.polynomial.polynomial.Polynomial.fit(data[x], data[y], 1)
         corr_and_p = stats.pearsonr(data[x], data[y])
 
         p_string = "p<0.01" if corr_and_p.pvalue<0.01 else f"p: {corr_and_p.pvalue:.2f}"
@@ -438,6 +438,7 @@ def freq_sim_scatter(
     max_output:tuple[float|None,float|None]=(None,None),
     min_output:tuple[float|None,float|None]=(None,None),
     fit_line=True,
+    eps=1e-6,
 ):
     """
     A figure containing, for each layer, a "scatter plot" (technically, a bivariate histogram)
@@ -478,19 +479,23 @@ def freq_sim_scatter(
     log_scale=[False,False]
     for k in range(2):
         if absolute[k] or torch.all(data_by_layer[0][keys[k]]>=0):
-            if max_output[k]:
+            if max_output is not None and max_output[k] is not None:
                 log_scale[k]=True
                 assert min_output is not None
+                # print(min_output)
                 assert isinstance(min_output[k],float)
-                lower_lims[k]=max(min_output[k],1e-6)
+                lower_lims[k]=max(min_output[k],eps)
+                for j,layer in enumerate(layer_list):
+                    data_by_layer[layer][keys[k]] = data_by_layer[layer][keys[k]].clip(min=eps)
             else:
                 lower_lims[k]=0
     axs_list[0].set_xlim(xmin=lower_lims[0])
     axs_list[0].set_ylim(ymin=lower_lims[1])
-    if max_output[0]:
-        axs_list[0].set_xlim(xmax=max_output[0])
-    if max_output[1]:
-        axs_list[0].set_ylim(ymax=max_output[1])
+    if max_output is not None:
+        if max_output[0] is not None:
+            axs_list[0].set_xlim(xmax=max_output[0])
+        if max_output[1] is not None:
+            axs_list[0].set_ylim(ymax=max_output[1])
 
     #precompute vmax
     vmaxs = np.zeros(n_layers)
@@ -499,10 +504,13 @@ def freq_sim_scatter(
         for k in range(2):
             if log_scale[k]:
                 data[keys[k]] = torch.log(data[keys[k]])
-                data[keys[k]] = data[keys[k]][~torch.isnan(data[keys[k]])]
+        #assert data[keys[0]].shape==data[keys[1]].shape
+        new_data={}
+        for k in range(2):
+            new_data[keys[k]] = data[keys[k]][torch.isfinite(data[keys[0]])&torch.isfinite(data[keys[1]])]
         vmaxs[i] = (np.max(
             np.histogram2d(
-                data[keys[0]], data[keys[1]], bins=100,
+                new_data[keys[0]], new_data[keys[1]], bins=100,
             )[0]
         ))
     vmax = np.max(vmaxs)
@@ -520,7 +528,7 @@ def freq_sim_scatter(
             cbar=show_cbar, weighted=False,
             vmax=vmax,
             cbar_ax=cbar_ax if show_cbar else None,
-            fit_line=fit_line,
+            fit_line=fit_line and (True not in log_scale),#breaks when one of the variables is in log scale
             log_scale=log_scale,
         )
 
@@ -572,6 +580,42 @@ def plot_cosines_vs_norms(data, keys, arrangement, layer_list:list[int]|None=Non
         max_output=max_output,
         min_output=min_output,
         fit_line=False,
+    )
+    return fig, axes
+
+def plot_any_vs_any(
+    data:dict[str,torch.Tensor],
+    keys:tuple[str,str],
+    arrangement,
+    layer_list:list[int]|None=None,
+    bounded=(True,True),
+    **kwargs
+):
+    if data[keys[0]].dim()==2:
+        data_by_layer = [
+            {key:data[key][layer].cpu() for key in keys}
+            for layer in range(data[keys[0]].shape[0])
+        ]
+    else:
+        data_by_layer = [
+            {key:data[key].cpu() for key in keys}
+        ]
+    max_output = (
+        None if bounded[0] else torch.max(data[keys[0]]).item(),
+        None if bounded[1] else torch.max(data[keys[1]]).item()
+    )
+    min_output = (
+        None if bounded[0] else torch.min(data[keys[0]]).item(),
+        None if bounded[1] else torch.min(data[keys[1]]).item()
+    )
+    fig, axes = freq_sim_scatter(
+        data_by_layer=data_by_layer,
+        keys=keys,
+        arrangement=arrangement,
+        layer_list=layer_list,
+        max_output=max_output,
+        min_output=min_output,
+        **kwargs,
     )
     return fig, axes
 
