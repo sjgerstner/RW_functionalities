@@ -415,7 +415,7 @@ def _freq_sim_scatter(
 
     if fit_line:
         #corr = np.corrcoef(data[x], data[y])[0, 1]
-        m, b = np.polynomial.polynomial.Polynomial.fit(data[x], data[y], 1)
+        b, m = np.polynomial.polynomial.Polynomial.fit(data[x], data[y], 1)
         corr_and_p = stats.pearsonr(data[x], data[y])
 
         p_string = "p<0.01" if corr_and_p.pvalue<0.01 else f"p: {corr_and_p.pvalue:.2f}"
