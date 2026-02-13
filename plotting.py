@@ -63,7 +63,9 @@ SHORT_TO_LONG = {
     "gate-_in+": "gate<0, in>0",
     "gate-_in-": "gate<0, in<0",
     "norm_gate": "$norm(w_{gate})$",
-    "norm_in_out": "$norm(w_{in})*norm(w_{out})$"
+    "norm_in_out": "$norm(w_{in})*norm(w_{out})$",
+    "norm_in": "$norm(w_{in})$",
+    "norm_out": "$norm(w_{out})$",
 }
 
 def _short_to_long(key:str)->str:
@@ -547,16 +549,16 @@ def freq_sim_scatter(
         )
     return fig, axes
 
-def plot_norms(data, arrangement, layer_list:list[int]|None=None):
+def plot_norms(data, arrangement, layer_list:list[int]|None=None, keys=("norm_gate", "norm_in_out")):
     data_by_layer = [
-        {key:data[key][layer].cpu() for key in ["norm_gate", "norm_in_out"]}
-        for layer in range(data["norm_gate"].shape[0])
+        {key:data[key][layer].cpu() for key in keys}
+        for layer in range(data[keys[0]].shape[0])
     ]
-    max_output = (torch.max(data["norm_gate"]).item(), torch.max(data["norm_in_out"]).item())
-    min_output = (torch.min(data["norm_gate"]).item(), torch.min(data["norm_in_out"]).item())
+    max_output = (torch.max(data[keys[0]]).item(), torch.max(data[keys[1]]).item())
+    min_output = (torch.min(data[keys[0]]).item(), torch.min(data[keys[1]]).item())
     fig, axes = freq_sim_scatter(
         data_by_layer=data_by_layer,
-        keys=("norm_gate", "norm_in_out"),
+        keys=keys,
         arrangement=arrangement,
         layer_list=layer_list,
         max_output=max_output,

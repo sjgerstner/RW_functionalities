@@ -35,6 +35,7 @@ EXPERIMENT_LIST = [
     "plot_selected_medians",
     "plot_norms",
     "plots_cosines_vs_norms",
+    "plot_norm_in_norm_out",
 ]
 MODEL_LIST = [
     "allenai/OLMo-7B-0424-hf",
@@ -55,6 +56,8 @@ MODEL_TO_CHECKPOINTS = {
     'allenai/OLMo-1B-hf': OLMO_CHECKPOINTS_1B,
     'allenai/OLMo-7B-0424-hf': OLMO_CHECKPOINTS_7B,
 }
+
+ARRANGEMENT_NEEDED_LIST = ["plot_fine", "plots_norms", "plot_cosines_vs_norms", "plot_norm_in_norm_out"]
 
 def _load_model(model_name, **kwargs):
     if model_name.startswith("bert"):
@@ -203,7 +206,7 @@ def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
 def _make_plots(args, data, model_name, path):
     """make plots"""
     layers = data['linout'].shape[0]
-    arrangement_needeed = any(s in args.experiments for s in ["plot_fine", "plots_norms", "plot_cosines_vs_norms"])
+    arrangement_needeed = any(s in args.experiments for s in ARRANGEMENT_NEEDED_LIST)
     if arrangement_needeed:
         ncols = 4
         arrangement = (int(np.ceil(layers/ncols)), ncols)
@@ -225,6 +228,12 @@ def _make_plots(args, data, model_name, path):
         if "plot_norms" in args.experiments:
             fig, _ax = plotting.plot_norms(data, arrangement=arrangement)
             fig.savefig(f"{path}/norms.pdf", bbox_inches="tight")
+            plt.close()
+        if "plot_norm_in_norm_out" in args.experiments:
+            fig, _ax = plotting.plot_norms(
+                data, arrangement=arrangement, keys=("norm_in", "norm_out")
+            )
+            fig.savefig(f"{path}/norm_in_norm_out.pdf", bbox_inches="tight")
             plt.close()
         #cosines vs norms
         if "plot_cosines_vs_norms" in args.experiments:
