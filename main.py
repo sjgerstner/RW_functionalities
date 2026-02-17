@@ -208,6 +208,10 @@ def _make_plots(args, data, model_name, path):
     layers = data['linout'].shape[0]
     arrangement_needeed = any(s in args.experiments for s in ARRANGEMENT_NEEDED_LIST)
     if arrangement_needeed:
+        aggregated_data = {
+            key:einops.rearrange(value, 'l n -> 1 (l n)') for key,value in data.items()
+            if isinstance(value, torch.Tensor) and value.dim()==2
+        }
         ncols = 4
         arrangement = (int(np.ceil(layers/ncols)), ncols)
         #fine-grained / cosines
@@ -229,18 +233,33 @@ def _make_plots(args, data, model_name, path):
             fig, _ax = plotting.plot_norms(data, arrangement=arrangement)
             fig.savefig(f"{path}/norms.pdf", bbox_inches="tight")
             plt.close()
+            fig, _ax = plotting.plot_norms(aggregated_data, arrangement=(1,1))
+            fig.savefig(f"{path}/norms_all_layers.pdf")
+            plt.close()
         if "plot_norm_in_norm_out" in args.experiments:
             fig, _ax = plotting.plot_norms(
                 data, arrangement=arrangement, keys=("norm_in", "norm_out")
             )
             fig.savefig(f"{path}/norm_in_norm_out.pdf", bbox_inches="tight")
             plt.close()
+            fig, _ax = plotting.plot_norms(
+                aggregated_data, arrangement=(1,1), keys=("norm_in", "norm_out")
+            )
+            fig.savefig(f"{path}/norm_in_norm_out_all_layers.pdf", bbox_inches="tight")
+            plt.close()
         #cosines vs norms
         if "plot_cosines_vs_norms" in args.experiments:
             for cosine_key in ["linout", "gateout", "gatelin"]:
                 for norms in ["norm_gate", "norm_in_out"]:
-                    fig, _ax = plotting.plot_cosines_vs_norms(data, arrangement=arrangement, keys=(cosine_key, norms))
+                    fig, _ax = plotting.plot_cosines_vs_norms(
+                        data, arrangement=arrangement, keys=(cosine_key, norms)
+                    )
                     fig.savefig(f"{path}/{cosine_key}_{norms}.pdf", bbox_inches="tight")
+                    plt.close()
+                    fig, _ax = plotting.plot_cosines_vs_norms(
+                        aggregated_data, arrangement=(1,1), keys=(cosine_key, norms)
+                    )
+                    fig.savefig(f"{path}/{cosine_key}_{norms}_all_layers.pdf", bbox_inches="tight")
                     plt.close()
     #fine-grained / cosines for selected layers of selected model
     if "plot_selected" in args.experiments and model_name==args.selected_model:
