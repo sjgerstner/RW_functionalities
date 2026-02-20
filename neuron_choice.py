@@ -5,7 +5,7 @@ from os.path import exists
 import random
 import torch
 
-from utils import COMBO_TO_NAME, is_in_category, VANILLA_CATEGORIES
+from weight_analysis_utils.utils import COMBO_TO_NAME, is_in_category, VANILLA_CATEGORIES
 
 def _key_to_name(category_key):
     if isinstance(category_key, tuple):

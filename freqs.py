@@ -9,8 +9,8 @@ import torch
 from transformer_lens import HookedTransformer
 
 import neuron_choice
-from plotting import SHORT_TO_LONG, _short_to_long, aligned_histograms, freq_sim_scatter, plot_any_vs_any
-from utils import COMBO_TO_NAME
+from weight_analysis_utils.plotting import SHORT_TO_LONG, _short_to_long, aligned_histograms, freq_sim_scatter, plot_any_vs_any
+from weight_analysis_utils.utils import COMBO_TO_NAME
 
 def load_wout_norms(model_name:str)->torch.Tensor:
     path = f"results/{model_name}/vector_lengths.pt"

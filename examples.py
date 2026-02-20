@@ -10,7 +10,7 @@ from ablation import generate_and_save
 from entropy.compare import unflattened_data
 from entropy.entropy_intervention import make_hooks
 from neuron_choice import neuron_choice
-from utils import NAME_TO_COMBO
+from weight_analysis_utils.utils import NAME_TO_COMBO
 
 def store_activation_hook(activation, hook, cache_dict):
     cache_dict[hook.name] = activation.clone()

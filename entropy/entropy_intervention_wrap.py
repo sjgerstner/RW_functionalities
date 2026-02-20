@@ -7,7 +7,7 @@ from transformer_lens import HookedTransformer
 
 from entropy.entropy_intervention import run_intervention_experiment
 from neuron_choice import neuron_choice
-from utils import NAME_TO_COMBO
+from weight_analysis_utils.utils import NAME_TO_COMBO
 
 def get_mean_values(args):
     summary_dict = torch.load(args.means_path, map_location=args.device)
