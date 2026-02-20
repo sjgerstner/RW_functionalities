@@ -4,7 +4,6 @@ especially for classification"""
 from math import ceil, floor
 from tqdm import tqdm
 
-import pandas as pd
 from scipy.stats import beta
 import torch
 from torch import Tensor
@@ -127,75 +126,6 @@ def torch_quantile(  # noqa: PLR0913 (too many arguments)
     if keepdim:
         return out
     return out.squeeze() if dim_was_none else out.squeeze(dim)
-
-def topk_df(vec, model, emb=None, k=64, nonneg=True):
-    #TODO refactor: shouldn't need whole model
-    """
-    model used for to_string fct and emb
-    """
-    if emb is None:
-        emb=model.W_U.detach()
-    logits = torch.matmul(vec, emb)
-    if not nonneg:
-        logits_abs = torch.abs(logits)
-        _, indices = torch.topk(logits_abs, k=k)
-        logits = logits.cpu()
-        values = [logits[i] for i in indices]
-    else:
-        values, indices = torch.topk(logits, k=k)
-        values=values.cpu()
-    str_tokens = [model.to_string(i) for i in indices]
-    df = pd.DataFrame(values, index=str_tokens, columns=["dot product"])
-    return df
-
-def neuron_analysis(model, layer, neuron, emb=None, k=64, verbose=True):
-    """
-    emb: if None (default), unembedding matrix of model.
-    Otherwise set explicit matrix of shape d_model, d_vocab.
-    """
-    out = model.W_out[layer,neuron,:].detach()
-    lin = model.W_in[layer,:,neuron].detach()
-    linout = cos(lin, out).item()
-    out_pos = topk_df(out, model, emb=emb, k=k)
-    out_neg = topk_df(-out, model, emb=emb, k=k)
-    lin_pos = topk_df(lin, model, emb=emb, k=k)
-    lin_neg = topk_df(-lin, model, emb=emb, k=k)
-    if hasattr(model, "W_gate") and model.W_gate is not None:
-        gate = model.W_gate[layer,:,neuron].detach()
-        gatelin = cos(gate, lin).item()
-        gateout = cos(gate, out).item()
-        gate_pos = topk_df(gate, model, emb=emb, k=k)
-        gate_neg = topk_df(-gate, model, emb=emb, k=k)
-
-    if verbose:
-        if hasattr(model, "W_gate") and model.W_gate is not None:
-            print("gate vs. linear similarity:", gatelin)
-            print("gate vs. out similarity:", gateout)
-        print("lin vs. out similarity:", linout)
-        print("================================")
-        print("most similar tokens for w_out:")
-        print(out_pos)
-        print("================================")
-        print("most similar tokens for -w_out:")
-        print(out_neg)
-        print("================================")
-        print("most similar tokens for w_in:")
-        print(lin_pos)
-        print("================================")
-        print("most similar tokens for -w_in:")
-        print(lin_neg)
-        if hasattr(model, "W_gate") and model.W_gate is not None:
-            print("================================")
-            print("most similar tokens for w_gate:")
-            print(gate_pos)
-            print("================================")
-            print("most similar tokens for -w_gate:")
-            print(gate_neg)
-
-    if hasattr(model, "W_gate") and model.W_gate is not None:
-        return gatelin, gateout, linout, out_pos, out_neg, lin_pos, lin_neg, gate_pos, gate_neg
-    else:
-        return linout, out_pos, out_neg, lin_pos, lin_neg
 
 def cos(v1,v2, pattern='... d, ... d -> ...'):
     "batched cosine similarities"
@@ -338,34 +268,6 @@ def compute_category(data, threshold=.5, device=None):
         return answer
     return approx_linout
 
-#the functions count_categories and category_lists are not used anymore
-# def count_categories(indices, gatelin, gateout, linout, threshold=.5):
-#     """
-#     Use this only for a small list of indices.
-#     To count categories on the whole model, use count_categories_all().
-#     If you have already done categories(),
-#     read everything off from the output tensor of that function.
-#     """
-#     answer = {key:0 for key in COMBO_TO_NAME}
-
-#     for l,n in indices:
-#         category = compute_category(linout[l][n], gateout[l][n], gatelin[l][n], threshold)
-#         answer[category] +=1
-#     return answer
-
-# def category_lists(indices, gatelin, gateout, linout, threshold=.5):
-#     """
-#     Use this only for a small list of indices.
-#     To list all categories, use categories().
-#     If you have already done that,
-#     you can just read everything off from the output tensor of categories().
-#     """
-#     answer = {key:[] for key in COMBO_TO_NAME}
-#     for l,n in indices:
-#         category = compute_category(linout[l][n], gateout[l][n], gatelin[l][n], threshold)
-#         answer[category].append((l,n))
-#     return answer
-
 def is_in_category(category_tensor, category_key):
     """Return a tensor of booleans indicating for each neuron if it belongs to the given category
 
@@ -405,53 +307,3 @@ def layerwise_count(category_tensor:torch.Tensor):
     for key in combo_name_dict:
         results[key] = torch.count_nonzero(is_in_category(category_tensor, key), dim=1)
     return results
-
-# def count_categories_all(category_tensor):
-#     """Output:
-#     dict with
-#     keys: strings corresponding to layers: '0', '1', etc.
-#     values: list of number of neurons (in that layer) for each class,
-#     where classes are ordered as in CATEGORY_NAMES
-#     """
-#     results = {str(l):[] for l in range(category_tensor.shape[0])}
-#     for i in range(len(CATEGORY_NAMES)):
-#         entry = torch.count_nonzero(category_tensor==i, dim=1)
-#         for l in range(category_tensor.shape[0]):
-#             results[str(l)].append(entry[l])
-#     return results
-
-# def gather_class_changes(all_data, checkpoint_names=None):
-#     """
-#     returns: dict
-#     with key (orig_class, new_class)
-#     and value list of tuples (new_checkpoint, layer, neuron)
-#     """
-#     class_changes = {}
-#     for i in range(11):
-#         for j in range(11):
-#             class_changes[(i,j)] = torch.empty((0,3)).cuda()
-#     if checkpoint_names is None:
-#         checkpoint_names = list(all_data.keys())
-#     for checkpoint_nr, checkpoint_name in enumerate(checkpoint_names):
-#         if checkpoint_nr == len(checkpoint_names)-1:
-#             break
-#         new_checkpoint_name = checkpoint_names[checkpoint_nr+1]
-#         old_classes = all_data[checkpoint_name]['categories'].cuda()
-#         new_classes = all_data[new_checkpoint_name]['categories'].cuda()
-#         for t in class_changes:
-#             indices = torch.nonzero((old_classes==t[0]) & (new_classes==t[1]))
-#             #each row of indices is an index indicating: layer, neuron
-#             indices_var = torch.cat(
-#                 [
-#                     torch.full(
-#                         (indices.shape[0],1), checkpoint_nr+1
-#                     ).cuda(),
-#                     indices
-#                 ],
-#                 dim=1
-#             )
-#             #each row of indices_var indicates: new_checkpoint_nr, layer, neuron
-#             class_changes[t] = torch.cat([class_changes[t], indices_var], dim=0)
-#     for t in class_changes:
-#         class_changes[t] = class_changes[t].cpu()
-#     return class_changes
