@@ -4,7 +4,7 @@ import os
 import numpy as np
 import torch
 
-from weight_analysis_utils.plotting import freq_sim_scatter, plot_any_vs_any
+from src.plotting import freq_sim_scatter, plot_any_vs_any
 from freqs import load_wout_norms, process_activation_data
 
 SIGN_COMBOS = ["gate+_in+", "gate+_in-", "gate-_in+", "gate-_in-"]

@@ -13,8 +13,8 @@ import einops
 from transformer_lens import HookedTransformer, HookedEncoderDecoder
 from transformer_lens.loading_from_pretrained import OLMO_CHECKPOINTS_1B, OLMO_CHECKPOINTS_7B
 
-import weight_analysis_utils.plotting as plotting
-import weight_analysis_utils.utils as utils
+import src.plotting as plotting
+import src.utils as utils
 
 torch.set_grad_enabled(False)
 

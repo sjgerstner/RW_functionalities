@@ -3,7 +3,7 @@ import torch
 
 from transformer_lens import HookedTransformer
 
-from utils import cos
+from src.utils import cos
 
 def topk_df(vec, model:HookedTransformer, emb=None, k=64, nonneg=True):
     #TODO refactor: shouldn't need whole model

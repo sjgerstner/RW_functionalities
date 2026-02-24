@@ -5,7 +5,7 @@ import os
 
 import torch
 
-from weight_analysis_utils.plotting import aligned_histograms
+from src.plotting import aligned_histograms
 
 #%%
 def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation')->torch.Tensor:
