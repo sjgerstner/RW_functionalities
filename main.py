@@ -13,8 +13,7 @@ import einops
 from transformer_lens import HookedTransformer, HookedEncoderDecoder
 from transformer_lens.loading_from_pretrained import OLMO_CHECKPOINTS_1B, OLMO_CHECKPOINTS_7B
 
-import src.plotting as plotting
-import src.utils as utils
+from src import utils, plotting
 
 torch.set_grad_enabled(False)
 
@@ -56,8 +55,6 @@ MODEL_TO_CHECKPOINTS = {
     'allenai/OLMo-1B-hf': OLMO_CHECKPOINTS_1B,
     'allenai/OLMo-7B-0424-hf': OLMO_CHECKPOINTS_7B,
 }
-
-ARRANGEMENT_NEEDED_LIST = ["plot_fine", "plots_norms", "plot_cosines_vs_norms", "plot_norm_in_norm_out"]
 
 def _load_model(model_name, **kwargs):
     if model_name.startswith("bert"):
@@ -157,13 +154,6 @@ def _load_data_if_exists(path):
 #         data = cosines(model_data)
 #     return data
 
-def _norm_data(model_data, data_to_write):
-    data_to_write["norm_gate"] = torch.linalg.vector_norm(model_data["W_gate"], dim=-1)
-    data_to_write["norm_in"] = torch.linalg.vector_norm(model_data["W_in"], dim=-1)
-    data_to_write["norm_out"] = torch.linalg.vector_norm(model_data["W_out"], dim=-1)
-    data_to_write["norm_in_out"] = data_to_write["norm_in"]*data_to_write["norm_out"]
-    return data_to_write    
-
 def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=None):
     model_data = _load_model_data(
         model_name,
@@ -181,109 +171,8 @@ def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=Non
         data["randomness"] = utils.randomness_regions(model_data)
     if "norms" in args.experiments and "norm_gate" not in data:
         print("computing norms of weight vectors")
-        data = _norm_data(model_data=model_data, data_to_write=data)
+        data = utils.norm_data(model_data=model_data, data_to_write=data)
     return data
-
-def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
-    """load and/or compute advanced data"""
-    if checkpoint_value is not None:
-        model_name=f"{model_name}/{checkpoint_value}"
-    #categories and category statistics
-    if "categories" in args.experiments:# and 'categories' not in data:
-        print("classifying neurons")
-        data['categories'] = utils.compute_category(
-            # gatelin=data['gatelin'].to(DEVICE),
-            # gateout=data['gateout'].to(DEVICE),
-            # linout=data['linout'].to(DEVICE)
-            data=data, device=DEVICE,
-            ) #layer neuron
-    if "category_stats" in args.experiments:# and 'category_stats' not in data:
-        print("category statistics")
-        data['category_stats'] = utils.layerwise_count(data['categories'])
-    torch.save(data, f"{path}/data.pt")
-    return data
-
-def _make_plots(args, data, model_name, path):
-    """make plots"""
-    layers = data['linout'].shape[0]
-    arrangement_needeed = any(s in args.experiments for s in ARRANGEMENT_NEEDED_LIST)
-    if arrangement_needeed:
-        aggregated_data = {
-            key:einops.rearrange(value, 'l n -> 1 (l n)') for key,value in data.items()
-            if isinstance(value, torch.Tensor) and value.dim()==2
-        }
-        ncols = 4
-        arrangement = (int(np.ceil(layers/ncols)), ncols)
-        #fine-grained / cosines
-        if "plot_fine" in args.experiments:# and not os.path.exists(f"{path}/fine.pdf"):
-            fig, _ax = plotting.wcos_plot(
-                data,
-                range(layers),
-                arrangement = arrangement,
-                # model_name=model_name
-            )
-            fig.savefig(
-                f"{path}/fine.pdf",
-                bbox_inches='tight',
-                #dpi=400
-            )
-            plt.close()
-        #norms of weight vectors
-        if "plot_norms" in args.experiments:
-            fig, _ax = plotting.plot_norms(data, arrangement=arrangement)
-            fig.savefig(f"{path}/norms.pdf", bbox_inches="tight")
-            plt.close()
-            fig, _ax = plotting.plot_norms(aggregated_data, arrangement=(1,1))
-            fig.savefig(f"{path}/norms_all_layers.pdf")
-            plt.close()
-        if "plot_norm_in_norm_out" in args.experiments:
-            fig, _ax = plotting.plot_norms(
-                data, arrangement=arrangement, keys=("norm_in", "norm_out")
-            )
-            fig.savefig(f"{path}/norm_in_norm_out.pdf", bbox_inches="tight")
-            plt.close()
-            fig, _ax = plotting.plot_norms(
-                aggregated_data, arrangement=(1,1), keys=("norm_in", "norm_out")
-            )
-            fig.savefig(f"{path}/norm_in_norm_out_all_layers.pdf", bbox_inches="tight")
-            plt.close()
-        #cosines vs norms
-        if "plot_cosines_vs_norms" in args.experiments:
-            for cosine_key in ["linout", "gateout", "gatelin"]:
-                for norms in ["norm_gate", "norm_in_out"]:
-                    fig, _ax = plotting.plot_cosines_vs_norms(
-                        data, arrangement=arrangement, keys=(cosine_key, norms)
-                    )
-                    fig.savefig(f"{path}/{cosine_key}_{norms}.pdf", bbox_inches="tight")
-                    plt.close()
-                    fig, _ax = plotting.plot_cosines_vs_norms(
-                        aggregated_data, arrangement=(1,1), keys=(cosine_key, norms)
-                    )
-                    fig.savefig(f"{path}/{cosine_key}_{norms}_all_layers.pdf", bbox_inches="tight")
-                    plt.close()
-    #fine-grained / cosines for selected layers of selected model
-    if "plot_selected" in args.experiments and model_name==args.selected_model:
-        fig, _ax = plotting.wcos_plot(
-            data,
-            args.selected_layers,
-            arrangement= (1, len(args.selected_layers)),
-            # model_name=model_name,
-        )
-        fig.savefig(
-            f"{path}/selected.pdf",
-            bbox_inches="tight"
-        )
-        plt.close()
-    #coarse-grained / category stats
-    if "plot_coarse" in args.experiments:# and not os.path.exists(f"{path}/coarse.pdf"):
-        fig, _ax = plotting.my_survey(data['category_stats'], model_name)
-        fig.savefig(f"{path}/coarse.pdf", bbox_inches='tight')
-        plt.close()
-    #quartiles
-    if "plot_boxplots" in args.experiments:# and not os.path.exists(f"{path}/quartiles.pdf")
-        fig, _ax = plotting.plot_boxplots(data, model_name)
-        fig.savefig(f"{path}/boxplot.pdf", bbox_inches='tight')
-        plt.close()
 
 def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
     """General function
@@ -314,12 +203,22 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
         )
         torch.save(data, f"{path}/data.pt")
     #advanced
-    data = _get_advanced_data(
-        args, data, model_name, path, checkpoint_value=checkpoint_value
+    data = utils.get_advanced_data(
+        experiments=args.experiments, data=data,
+        #model_name,
+        path=path,
+        #checkpoint_value=checkpoint_value,
     )
     #create various plots if requested and save them
     print("plots")
-    _make_plots(args, data, model_name, path)
+    plotting.make_all_weight_based_plots(
+        experiments=args.experiments,
+        data=data,
+        model_name=model_name,
+        path=path,
+        selected_model=args.selected_model,
+        selected_layers=args.selected_layers,
+    )
 
     return data
 

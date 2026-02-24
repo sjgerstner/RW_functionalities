@@ -307,3 +307,37 @@ def layerwise_count(category_tensor:torch.Tensor):
     for key in combo_name_dict:
         results[key] = torch.count_nonzero(is_in_category(category_tensor, key), dim=1)
     return results
+
+def norm_data(model_data, data_to_write):
+    if "W_gate" in model_data:
+        data_to_write["norm_gate"] = torch.linalg.vector_norm(model_data["W_gate"], dim=-1)
+    data_to_write["norm_in"] = torch.linalg.vector_norm(model_data["W_in"], dim=-1)
+    data_to_write["norm_out"] = torch.linalg.vector_norm(model_data["W_out"], dim=-1)
+    data_to_write["norm_in_out"] = data_to_write["norm_in"]*data_to_write["norm_out"]
+    return data_to_write
+
+def get_advanced_data(
+    experiments, data,
+    #model_name,
+    path=None,
+    device=None,
+    #checkpoint_value=None
+):
+    """load and/or compute advanced data"""
+    # if checkpoint_value is not None:
+    #     model_name=f"{model_name}/{checkpoint_value}"
+    #categories and category statistics
+    if "categories" in experiments:# and 'categories' not in data:
+        print("classifying neurons")
+        data['categories'] = compute_category(
+            # gatelin=data['gatelin'].to(DEVICE),
+            # gateout=data['gateout'].to(DEVICE),
+            # linout=data['linout'].to(DEVICE)
+            data=data, device=device,
+            ) #layer neuron
+    if "category_stats" in experiments:# and 'category_stats' not in data:
+        print("category statistics")
+        data['category_stats'] = layerwise_count(data['categories'])
+    if path:
+        torch.save(data, f"{path}/data.pt")
+    return data
