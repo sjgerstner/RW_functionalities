@@ -6,11 +6,12 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 import torch
+import einops
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from utils import COMBO_TO_NAME, VANILLA_CATEGORIES
+from .utils import COMBO_TO_NAME, VANILLA_CATEGORIES, make_combo_name_dict, floats_to_strings
 
 torch.set_grad_enabled(False)
 
@@ -55,10 +56,50 @@ SHORT_TO_LONG = {
     "gateout":"$cos(w_{gate}, w_{out})$",
     "linout":"$cos(w_{in}, w_{out})$",
     "summary_freq": "Frequency of gate>0",
+    "summary_sum": "Mean norm of output",
+    "freq": "Frequency of",
+    "sum": "Mean norm of output when",
+    "gate+_in+": "gate>0, in>0",
+    "gate+_in-": "gate>0, in<0",
+    "gate-_in+": "gate<0, in>0",
+    "gate-_in-": "gate<0, in<0",
+    "norm_gate": "$norm(w_{gate})$",
+    "norm_in_out": "$norm(w_{in})*norm(w_{out})$",
+    "norm_in": "$norm(w_{in})$",
+    "norm_out": "$norm(w_{out})$",
 }
 
+ARRANGEMENT_NEEDED_LIST = [
+    "plot_fine", "plots_norms", "plot_cosines_vs_norms", "plot_norm_in_norm_out"
+]
+
+def make_color_dict(category_keys:list[str])->dict[str, tuple[float,float,float,float]]:
+    value_list = np.linspace(-1,1, num=len(category_keys))
+    return {
+        key: (
+            (1-max(0,-value_list[i])),
+            (1-max(0,-value_list[i])),
+            (1-max(0,value_list[i])),
+            abs(value_list[i])**0.5 if value_list[i]<0 else 1,
+        )
+        for i,key in enumerate(category_keys)
+    }
+
+def _short_to_long(key:str)->str:
+    if key in SHORT_TO_LONG:
+        return SHORT_TO_LONG[key]
+    keys = key.split('_')
+    combo, metric_type = '_'.join(keys[:-1]), keys[-1]
+    return f"{SHORT_TO_LONG[metric_type]} {SHORT_TO_LONG[combo]}"
+
+def make_full_key_list(key_list:list[float])->list[str]:
+    old_len = len(key_list)
+    step_size = min(key_list[i+1]-key_list[i] for i in range(old_len-1))
+    float_list = np.linspace(-1,1, num = round(2/step_size), endpoint=False).tolist()
+    return floats_to_strings(float_list)
+
 def my_survey(
-    results:dict, model_name:str,
+    results:dict, model_name:str|None=None, white_text=True, text_threshold=700,
 ):
     """
     Parameters
@@ -74,21 +115,35 @@ def my_survey(
     category_colors: list of tuples of 4 floats
         The rgba colors corresponding to the categories
     """
+    key_list = list(results.keys())
+    n_layers = results[key_list[0]].numel()
+    original_results_device = results[key_list[0]].device
+    labels = [f'Layer {n}' for n in range(n_layers)]#[0,...,31] if 32 layers
     if (1,1,1) in results.keys():
         names_and_colors, combo_to_name = CATEGORY_COLORS, COMBO_TO_NAME
-        labels = [f'Layer {n}' for n in range(results[(1,1,1)].numel())]#[0,...,31] if 32 layers
     elif 1 in results.keys():
         names_and_colors, combo_to_name = VANILLA_COLORS, VANILLA_CATEGORIES
-        labels = [f'Layer {n}' for n in range(results[1].numel())]#[0,...,31] if 32 layers
     else:
-        raise NotImplementedError(
-            f"The dictionary keys do not seem to correspond to the categories we defined: \
-                {results.keys()}"
-        )
+        for key in key_list:
+            results[f"{key:.2f}"] = results[key]#add string-formatted keys
+        key_list = make_full_key_list(key_list)
+        combo_to_name = make_combo_name_dict(key_list)
+        names_and_colors = make_color_dict(key_list)
+        # raise NotImplementedError(
+        #     f"The dictionary keys do not seem to correspond to the categories we defined: \
+        #         {results.keys()}"
+        # )
     #my preprocessing:
     # labels = list(results.keys())
     # data = np.array(list(results.values()))
-    data = np.array(torch.stack(list(results.values()), dim=-1).cpu())
+    data = np.array(torch.stack(
+        [
+            results[key] if key in results
+            else torch.zeros(n_layers, device=original_results_device)
+            for key in key_list
+        ],
+        dim=-1
+    ).cpu())
 
     data_cum = data.cumsum(axis=1)#cumsum over categories
 
@@ -100,15 +155,14 @@ def my_survey(
     ax.set_xlim(0, np.sum(data, axis=1).max())
 
     for i, (key, color) in enumerate(names_and_colors.items()):
-    #for key in COMBO_TO_NAME:
         widths = data[:,i]
         starts = data_cum[:, i] - widths
         rects = ax.barh(labels, widths, left=starts,
                         #height=0.5,
                         label=combo_to_name[key], color=color)
-        if any(widths>700):
+        if any(widths>text_threshold):
             r, g, b, _ = color
-            text_color = 'black' if (r>.5 or g>.5) else 'white'#TODO
+            text_color = 'black' if (r>.5 or g>.5 or not white_text) else 'white'#TODO
             ax.bar_label(rects, label_type='center', color=text_color,
                          #fontsize='xx-large'
                          )
@@ -118,8 +172,8 @@ def my_survey(
         loc='upper left',
         #fontsize='xx-large'
         )
-
-    ax.set_title(model_name)#TODO do we want that?
+    if model_name is not None:
+        ax.set_title(model_name)
 
     return fig, ax
 
@@ -348,10 +402,16 @@ def aligned_histograms(
     fig.savefig(savefile, bbox_inches='tight')
     plt.close()
 
-def _freq_sim_scatter(ax, data, x, y, title, cbar=True,
-                     cbar_ax=None,
-                     weighted=False, vmax=None,
-                     ylim=-1):
+def _freq_sim_scatter(
+    ax, data, x, y, title, cbar=True,
+    cbar_ax=None,
+    weighted=False, vmax=None,
+    fit_line=True,
+    **kwargs,
+    #ylim=-1,
+    # lower_lims=[-1,-1],
+    # upper_lims=[1,1],
+):
     """
     "Scatter plot" (technically, a bivariate histogram)
     of sparsity (x) vs in_out_sim (y).
@@ -376,6 +436,7 @@ def _freq_sim_scatter(ax, data, x, y, title, cbar=True,
         cbar_ax=cbar_ax,
         cbar_kws={'orientation': 'vertical', 'pad':0.02},
         rasterized=True,
+        **kwargs,
     )
     # label the colorbar
     #cbar = sns_plot.collections[0].colorbar
@@ -390,25 +451,32 @@ def _freq_sim_scatter(ax, data, x, y, title, cbar=True,
     ax.set_xlabel('')
     ax.set_title(title)
 
-    #corr = np.corrcoef(data[x], data[y])[0, 1]
-    m, b = np.polyfit(data[x], data[y], 1)
-    corr_and_p = stats.pearsonr(data[x], data[y])
+    if fit_line:
+        #corr = np.corrcoef(data[x], data[y])[0, 1]
+        b, m = np.polynomial.polynomial.Polynomial.fit(data[x], data[y], 1)
+        corr_and_p = stats.pearsonr(data[x], data[y])
 
-    p_string = "p<0.01" if corr_and_p.pvalue<0.01 else f"p: {corr_and_p.pvalue:.2f}"
-    ax.plot(
-        data[x], m*data[x] + b, color='red', lw=0.8,alpha=0.8,
-        label=f'corr: {corr_and_p.correlation:.2f}\n{p_string}'
-    )
-    ax.legend(loc='upper right', fontsize='small')
+        p_string = "p<0.01" if corr_and_p.pvalue<0.01 else f"p: {corr_and_p.pvalue:.2f}"
+        ax.plot(
+            data[x], m*data[x] + b, color='red', lw=0.8,alpha=0.8,
+            label=f'corr: {corr_and_p.correlation:.2f}\n{p_string}'
+        )
+        ax.legend(loc='upper right', fontsize='small')
 
-    ax.set_xlim(-0.02, 1)
-    ax.set_ylim(ylim, 1)
     ax.grid(alpha=0.3, linestyle='--')
 
-    return ax
+    #return ax
 
 def freq_sim_scatter(
-    data_by_layer, keys, arrangement, suptitle, savefile, layer_list=None, absy=False,
+    data_by_layer:list[dict[str,torch.Tensor]],
+    keys, arrangement,
+    #suptitle,
+    savefile=None, layer_list:list[int]|None=None,
+    absolute=(False,False),
+    max_output:tuple[float|None,float|None]=(None,None),
+    min_output:tuple[float|None,float|None]=(None,None),
+    fit_line=True,
+    eps=1e-6,
 ):
     """
     A figure containing, for each layer, a "scatter plot" (technically, a bivariate histogram)
@@ -427,20 +495,13 @@ def freq_sim_scatter(
         n_layers = len(layer_list)
     else:
         n_layers = len(data_by_layer)
-        layer_list = range(n_layers)
-
-    #precompute vmax
-    vmaxs = np.zeros(n_layers)
-    for i,layer in enumerate(layer_list):
-        data = data_by_layer[layer]
-        vmaxs[i] = (np.max(np.histogram2d(data[keys[0]], data[keys[1]], bins=100)[0]))
-    vmax = np.max(vmaxs)
+        layer_list = list(range(n_layers))
 
     fig, axes = plt.subplots(
         arrangement[0], arrangement[1], #figsize=(12, 4),
         sharex=True, sharey=True,
         layout='constrained',
-    )
+    )#by default both x and y axis will show the interval (0,1).
     fig.set_figwidth(4*arrangement[1])
     fig.set_figheight(4*arrangement[0])
 
@@ -449,88 +510,248 @@ def freq_sim_scatter(
     else:
         axs_list = axes.ravel().tolist()
     cbar_ax = fig.add_axes([1, .03, .02, .91])
+    # Set upper and lower limits,
+    # and log scale if necessary.
+    # This will generalise to all axes thanks to sharex, sharey
+    lower_lims=[-1,-1]
+    log_scale=[False,False]
+    for k in range(2):
+        if absolute[k] or torch.all(data_by_layer[0][keys[k]]>=0):
+            if max_output is not None and max_output[k] is not None:
+                log_scale[k]=True
+                assert min_output is not None
+                # print(min_output)
+                assert isinstance(min_output[k],float)
+                lower_lims[k]=max(min_output[k],eps)
+                for j,layer in enumerate(layer_list):
+                    data_by_layer[layer][keys[k]] = data_by_layer[layer][keys[k]].clip(min=eps)
+            else:
+                lower_lims[k]=0
+    axs_list[0].set_xlim(xmin=lower_lims[0])
+    axs_list[0].set_ylim(ymin=lower_lims[1])
+    if max_output is not None:
+        if max_output[0] is not None:
+            axs_list[0].set_xlim(xmax=max_output[0])
+        if max_output[1] is not None:
+            axs_list[0].set_ylim(ymax=max_output[1])
+
+    #precompute vmax
+    vmaxs = np.zeros(n_layers)
+    for i,layer in enumerate(layer_list):
+        data = {key:value.clone() for key,value in data_by_layer[layer].items()}
+        for k in range(2):
+            if log_scale[k]:
+                data[keys[k]] = torch.log(data[keys[k]])
+        #assert data[keys[0]].shape==data[keys[1]].shape
+        new_data={}
+        for k in range(2):
+            new_data[keys[k]] = data[keys[k]][torch.isfinite(data[keys[0]])&torch.isfinite(data[keys[1]])]
+        vmaxs[i] = (np.max(
+            np.histogram2d(
+                new_data[keys[0]], new_data[keys[1]], bins=100,
+            )[0]
+        ))
+    vmax = np.max(vmaxs)
+
     for i, layer in enumerate(layer_list):
         data = data_by_layer[layer]
-        if absy:
-            data[keys[1]] = torch.abs(data[keys[1]])
-            ylim=0
-        else:
-            ylim=-1
-        cbar = i==len(layer_list)-1
-        axs_list[i] = _freq_sim_scatter(
-            axs_list[i], data, x=keys[0], y=keys[1],
-            title=f'Layer {layer}', cbar=cbar, weighted=False,
+        for k in range(2):
+            if absolute[k]:
+                data[keys[k]] = torch.abs(data[keys[k]])
+        # Show colour‑bar only on the last subplot
+        show_cbar = i==len(layer_list)-1
+        _freq_sim_scatter(
+            ax=axs_list[i], data=data, x=keys[0], y=keys[1],
+            title=f'Layer {layer}' if len(data_by_layer)>1 else None,
+            cbar=show_cbar, weighted=False,
             vmax=vmax,
-            cbar_ax=cbar_ax if cbar else None,
-            ylim=ylim,
+            cbar_ax=cbar_ax if show_cbar else None,
+            fit_line=fit_line and (True not in log_scale),#breaks when one of the variables is in log scale
+            log_scale=log_scale,
         )
 
     # make y label larger
     fontsize=11.5
-    fig.supxlabel(SHORT_TO_LONG[keys[0]], fontsize=fontsize)
-    fig.supylabel(SHORT_TO_LONG[keys[1]], fontsize=fontsize)
+    fig.supxlabel(_short_to_long(keys[0]), fontsize=fontsize)
+    fig.supylabel(_short_to_long(keys[1]), fontsize=fontsize)
 
-    fig.suptitle(suptitle)
+    #fig.suptitle(suptitle)
 
-    #fig.tight_layout(rect=[0, 0, .9, 1])
-    plt.savefig(
-        savefile,
-        #dpi=150,
-        bbox_inches='tight',
+    if savefile:
+        plt.savefig(
+            savefile,
+            #dpi=150,
+            bbox_inches='tight',
+        )
+    return fig, axes
+
+def plot_norms(data, arrangement, layer_list:list[int]|None=None, keys=("norm_gate", "norm_in_out")):
+    data_by_layer = [
+        {key:data[key][layer].cpu() for key in keys}
+        for layer in range(data[keys[0]].shape[0])
+    ]
+    max_output = (torch.max(data[keys[0]]).item(), torch.max(data[keys[1]]).item())
+    min_output = (torch.min(data[keys[0]]).item(), torch.min(data[keys[1]]).item())
+    fig, axes = freq_sim_scatter(
+        data_by_layer=data_by_layer,
+        keys=keys,
+        arrangement=arrangement,
+        layer_list=layer_list,
+        max_output=max_output,
+        min_output=min_output,
+        fit_line=False,
     )
+    return fig, axes
 
-# def _plot_class_changes(ax, pair_to_nchanges_dict):
-#     mat = np.full((11,11), np.nan)
-#     for key in pair_to_nchanges_dict:
-#         mat[key] = pair_to_nchanges_dict[key]
-#     rowtotals = einops.reduce(mat, 'from to -> from 1', 'sum')
-#     mat /= rowtotals
-#     #don't show the diagonal
-#     mat_nodiag = mat.copy()
-#     for i in range(11):
-#         mat_nodiag[i,i]=np.nan
-#     ax.imshow(mat_nodiag)
-#     #write all the probs including in the diagonal
-#     for i in range(11):
-#         for j in range(11):
-#             _text = ax.text(j, i, f"{mat[i, j]:.2f}",
-#                         ha="center", va="center",
-#                         color='black' if (j==i and mat[i,j]!=np.nan) else "w",
-#                         )
-#     return ax
+def plot_cosines_vs_norms(data, keys, arrangement, layer_list:list[int]|None=None):
+    data_by_layer = [
+        {key:data[key][layer].cpu() for key in keys}
+        for layer in range(data[keys[0]].shape[0])
+    ]
+    max_output = (None, torch.max(data[keys[1]]).item())
+    min_output = (None, torch.min(data[keys[1]]).item())
+    fig, axes = freq_sim_scatter(
+        data_by_layer=data_by_layer,
+        keys=keys,
+        arrangement=arrangement,
+        layer_list=layer_list,
+        max_output=max_output,
+        min_output=min_output,
+        fit_line=False,
+    )
+    return fig, axes
 
-# def plot_class_changes_one(pair_to_nchanges_dict, model_name, stepsize):
-#     fig, ax = plt.subplots()
-#     fig.set_figwidth(6.75)
-#     fig.set_figheight(6.75)
-#     ax = _plot_class_changes(ax, pair_to_nchanges_dict)
-#     ax.set_xticks(range(11), CATEGORY_COLORS.keys(),
-#                   rotation=45, ha="right", rotation_mode="anchor")
-#     ax.set_yticks(range(11), CATEGORY_COLORS.keys())
-#     ax.set_ylabel('from class...', fontsize=10)
-#     ax.set_xlabel('to class...', fontsize=10)
-#     ax.set_title(f"{model_name}, transitions after {stepsize} steps")
-#     return fig, ax
+def plot_any_vs_any(
+    data:dict[str,torch.Tensor],
+    keys:tuple[str,str],
+    arrangement:tuple[int,int],
+    layer_list:list[int]|None=None,
+    bounded=(True,True),
+    **kwargs, #savefile, absolute, fit_line, eps
+):
+    """two-dimensional fine-grained heatmap (almost scatter plot)
 
-# def plot_class_changes_several(dict_of_dicts, arrangement, title):
-#     fig, axs = plt.subplots(
-#         arrangement[0],
-#         arrangement[1],
-#         sharex=True,
-#         sharey=True,
-#         constrained_layout=True
-#     )
-#     fig.set_figheight(6.75*arrangement[0])
-#     fig.set_figwidth(6.75*arrangement[1])
-#     axs_list = axs.ravel().tolist()
-#     for i,key in enumerate(dict_of_dicts.keys()):
-#         ax=axs_list[i]
-#         ax = _plot_class_changes(ax, dict_of_dicts[key])
-#         ax.set_title(str(key), fontsize=10)
-#     axs_list[-1].set_xticks(range(11), CATEGORY_COLORS.keys(),
-#                            rotation=45, ha="right", rotation_mode="anchor")
-#     axs_list[-1].set_yticks(range(11), CATEGORY_COLORS.keys())
-#     fig.supylabel("from class...", fontsize=10)
-#     fig.supxlabel("to class...", fontsize=10)
-#     fig.suptitle(title)
-#     return fig, axs
+    Args:
+        data (dict[str,torch.Tensor]): each key describes a quantity, each value is the corresponding tensor (2-d is (layer, neuron), 1-d is just 1 layer)
+        keys (tuple[str,str]): the keys to plot against each other
+        arrangement (tuple[int,int]): the number of rows and columns in the plot (each subplot is a layer)
+        layer_list (list[int] | None, optional): list of layers to plot. Defaults to None (all layers).
+        bounded (tuple, optional): If the quantities in x and y axis are bounded. Defaults to (True,True).
+
+    Returns:
+        fig, ax
+    """
+    if data[keys[0]].dim()==2:
+        data_by_layer = [
+            {key:data[key][layer].cpu() for key in keys}
+            for layer in range(data[keys[0]].shape[0])
+        ]
+    else:
+        data_by_layer = [
+            {key:data[key].cpu() for key in keys}
+        ]
+    max_output = (
+        None if bounded[0] else torch.max(data[keys[0]]).item(),
+        None if bounded[1] else torch.max(data[keys[1]]).item()
+    )
+    min_output = (
+        None if bounded[0] else torch.min(data[keys[0]]).item(),
+        None if bounded[1] else torch.min(data[keys[1]]).item()
+    )
+    fig, axes = freq_sim_scatter(
+        data_by_layer=data_by_layer,
+        keys=keys,
+        arrangement=arrangement,
+        layer_list=layer_list,
+        max_output=max_output,
+        min_output=min_output,
+        **kwargs,
+    )
+    return fig, axes
+
+
+def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
+    """make plots"""
+    layers = data['linout'].shape[0]
+    arrangement_needeed = any(s in experiments for s in ARRANGEMENT_NEEDED_LIST)
+    if arrangement_needeed:
+        aggregated_data = {
+            key:einops.rearrange(value, 'l n -> 1 (l n)') for key,value in data.items()
+            if isinstance(value, torch.Tensor) and value.dim()==2
+        }
+        ncols = 4
+        arrangement = (int(np.ceil(layers/ncols)), ncols)
+        #fine-grained / cosines
+        if "plot_fine" in experiments:# and not os.path.exists(f"{path}/fine.pdf"):
+            fig, _ax = wcos_plot(
+                data,
+                range(layers),
+                arrangement = arrangement,
+                # model_name=model_name
+            )
+            fig.savefig(
+                f"{path}/fine.pdf",
+                bbox_inches='tight',
+                #dpi=400
+            )
+            plt.close()
+        #norms of weight vectors
+        if "plot_norms" in experiments:
+            fig, _ax = plot_norms(data, arrangement=arrangement)
+            fig.savefig(f"{path}/norms.pdf", bbox_inches="tight")
+            plt.close()
+            fig, _ax = plot_norms(aggregated_data, arrangement=(1,1))
+            fig.savefig(f"{path}/norms_all_layers.pdf")
+            plt.close()
+        if "plot_norm_in_norm_out" in experiments:
+            fig, _ax = plot_norms(
+                data, arrangement=arrangement, keys=("norm_in", "norm_out")
+            )
+            fig.savefig(f"{path}/norm_in_norm_out.pdf", bbox_inches="tight")
+            plt.close()
+            fig, _ax = plot_norms(
+                aggregated_data, arrangement=(1,1), keys=("norm_in", "norm_out")
+            )
+            fig.savefig(f"{path}/norm_in_norm_out_all_layers.pdf", bbox_inches="tight")
+            plt.close()
+        #cosines vs norms
+        if "plot_cosines_vs_norms" in experiments:
+            for cosine_key in ["linout", "gateout", "gatelin"]:
+                if cosine_key not in data:
+                    continue
+                for norms in ["norm_gate", "norm_in_out"]:
+                    if norms not in data:
+                        continue
+                    fig, _ax = plot_cosines_vs_norms(
+                        data, arrangement=arrangement, keys=(cosine_key, norms)
+                    )
+                    fig.savefig(f"{path}/{cosine_key}_{norms}.pdf", bbox_inches="tight")
+                    plt.close()
+                    fig, _ax = plot_cosines_vs_norms(
+                        aggregated_data, arrangement=(1,1), keys=(cosine_key, norms)
+                    )
+                    fig.savefig(f"{path}/{cosine_key}_{norms}_all_layers.pdf", bbox_inches="tight")
+                    plt.close()
+    #fine-grained / cosines for selected layers of selected model
+    if "plot_selected" in experiments and model_name==kwargs["selected_model"]:
+        fig, _ax = wcos_plot(
+            data,
+            kwargs["selected_layers"],
+            arrangement= (1, len(kwargs["selected_layers"])),
+            # model_name=model_name,
+        )
+        fig.savefig(
+            f"{path}/selected.pdf",
+            bbox_inches="tight"
+        )
+        plt.close()
+    #coarse-grained / category stats
+    if "plot_coarse" in experiments:# and not os.path.exists(f"{path}/coarse.pdf"):
+        fig, _ax = my_survey(data['category_stats'], model_name)
+        fig.savefig(f"{path}/coarse.pdf", bbox_inches='tight')
+        plt.close()
+    #quartiles
+    if "plot_boxplots" in experiments:# and not os.path.exists(f"{path}/quartiles.pdf")
+        fig, _ax = plot_boxplots(data, model_name)
+        fig.savefig(f"{path}/boxplot.pdf", bbox_inches='tight')
+        plt.close()

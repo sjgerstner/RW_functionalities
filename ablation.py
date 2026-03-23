@@ -5,7 +5,7 @@ import torch
 from transformer_lens import HookedTransformer
 # Utilities
 from neuron_choice import neuron_choice, get_n_neurons
-from utils import NAME_TO_COMBO
+from src.weight_analyis_utils.utils import NAME_TO_COMBO
 from entropy.entropy_intervention_wrap import get_mean_values
 from attributes.utils import make_neuron_hooks
 

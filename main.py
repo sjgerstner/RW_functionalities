@@ -13,8 +13,7 @@ import einops
 from transformer_lens import HookedTransformer, HookedEncoderDecoder
 from transformer_lens.loading_from_pretrained import OLMO_CHECKPOINTS_1B, OLMO_CHECKPOINTS_7B
 
-import plotting
-import utils
+from src.weight_analysis_utils import utils, plotting
 
 torch.set_grad_enabled(False)
 
@@ -23,6 +22,7 @@ DEVICE='cuda:0'
 EXPERIMENT_LIST = [
     "beta",
     "randomness", #compute 95 percent randomness regions (95 percent of 'mismatched' weight cosines are in this region)
+    "norms", #norms of weight vectors
     "categories", #categorize the neurons
     "category_stats",#compute statistics of RW classes by layer
     #"quartiles",#compute quartiles of cosine similarities (by layer)
@@ -32,6 +32,9 @@ EXPERIMENT_LIST = [
     "plot_boxplots",#make boxplots of cosine similarities by layer
     "plot_all_medians",#make one plot with the median cos(w_in,w_out) similarities (y) across layers (x) of all models (one line per model)
     "plot_selected_medians",
+    "plot_norms",
+    "plots_cosines_vs_norms",
+    "plot_norm_in_norm_out",
 ]
 MODEL_LIST = [
     "allenai/OLMo-7B-0424-hf",
@@ -166,68 +169,10 @@ def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=Non
     if "randomness" in args.experiments and "randomness" not in data:
         print("computing layer-specific randomness regions")
         data["randomness"] = utils.randomness_regions(model_data)
+    if "norms" in args.experiments and "norm_gate" not in data:
+        print("computing norms of weight vectors")
+        data = utils.norm_data(model_data=model_data, data_to_write=data)
     return data
-
-def _get_advanced_data(args, data, model_name, path, checkpoint_value=None):
-    """load and/or compute advanced data"""
-    if checkpoint_value is not None:
-        model_name=f"{model_name}/{checkpoint_value}"
-    #categories and category statistics
-    if "categories" in args.experiments:# and 'categories' not in data:
-        print("classifying neurons")
-        data['categories'] = utils.compute_category(
-            # gatelin=data['gatelin'].to(DEVICE),
-            # gateout=data['gateout'].to(DEVICE),
-            # linout=data['linout'].to(DEVICE)
-            data=data, device=DEVICE,
-            ) #layer neuron
-    if "category_stats" in args.experiments:# and 'category_stats' not in data:
-        print("category statistics")
-        data['category_stats'] = utils.layerwise_count(data['categories'])
-    torch.save(data, f"{path}/data.pt")
-    return data
-
-def _make_plots(args, data, model_name, path):
-    """make plots"""
-    layers = data['linout'].shape[0]
-    #fine-grained / cosines
-    if "plot_fine" in args.experiments:# and not os.path.exists(f"{path}/fine.pdf"):
-        ncols = 4
-        fig, _ax = plotting.wcos_plot(
-            data,
-            range(layers),
-            arrangement = (int(np.ceil(layers/ncols)), ncols),
-            # model_name=model_name
-        )
-        fig.savefig(
-            f"{path}/fine.pdf",
-            bbox_inches='tight',
-            #dpi=400
-        )
-        plt.close()
-    #fine-grained / cosines for selected layers of selected model
-    if "plot_selected" in args.experiments and model_name==args.selected_model:
-        fig, _ax = plotting.wcos_plot(
-            data,
-            args.selected_layers,
-            arrangement= (1, len(args.selected_layers)),
-            # model_name=model_name,
-        )
-        fig.savefig(
-            f"{path}/selected.pdf",
-            bbox_inches="tight"
-        )
-        plt.close()
-    #coarse-grained / category stats
-    if "plot_coarse" in args.experiments:# and not os.path.exists(f"{path}/coarse.pdf"):
-        fig, _ax = plotting.my_survey(data['category_stats'], model_name)
-        fig.savefig(f"{path}/coarse.pdf", bbox_inches='tight')
-        plt.close()
-    #quartiles
-    if "plot_boxplots" in args.experiments:# and not os.path.exists(f"{path}/quartiles.pdf")
-        fig, _ax = plotting.plot_boxplots(data, model_name)
-        fig.savefig(f"{path}/boxplot.pdf", bbox_inches='tight')
-        plt.close()
 
 def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
     """General function
@@ -248,18 +193,32 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
         path
     )
     #cosines etc.
-    if ("linout" not in data) or (("randomness" in args.experiments) and "randomness" not in data):
+    if (
+        ("linout" not in data)
+        or (("randomness" in args.experiments) and "randomness" not in data)
+        or (("norms" in args.experiments) and "norm_gate" not in data)
+    ):
         data = _get_basic_data(
             args, data, model_name, cache_dir=cache_dir, checkpoint_value=checkpoint_value
         )
         torch.save(data, f"{path}/data.pt")
     #advanced
-    data = _get_advanced_data(
-        args, data, model_name, path, checkpoint_value=checkpoint_value
+    data = utils.get_advanced_data(
+        experiments=args.experiments, data=data,
+        #model_name,
+        path=path,
+        #checkpoint_value=checkpoint_value,
     )
     #create various plots if requested and save them
     print("plots")
-    _make_plots(args, data, model_name, path)
+    plotting.make_all_weight_based_plots(
+        experiments=args.experiments,
+        data=data,
+        model_name=model_name,
+        path=path,
+        selected_model=args.selected_model,
+        selected_layers=args.selected_layers,
+    )
 
     return data
 
