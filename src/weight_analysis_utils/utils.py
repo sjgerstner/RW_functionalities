@@ -233,14 +233,20 @@ def beta_randomness_region(d, p=0.05):
     #absolute_quantile = rv.ppf(q=1-p)
     return low_quantile, high_quantile#, absolute_quantile
 
-def _approx(x, threshold=.5):
-    ans = torch.where(x>threshold, 1,0)
-    ans = torch.where(x<-threshold, -1, ans)
+def _approx(x, threshold:float|None=.5, bins:int|None=None)->Tensor|float|int:
+    """If both bins and thresholds are not None, bins wins."""
+    if bins is not None:
+        ans = torch.floor(x*bins/2)*2/bins        
+    elif threshold is not None:
+        ans = torch.where(x>threshold, 1,0)
+        ans = torch.where(x<-threshold, -1, ans)
+    else:#threshold is None and bins is None
+        raise RuntimeError("Please specify exactly one of threshold and bins. You set both to None.")
     if isinstance(x, float):
         return ans.item()
     return ans
 
-def compute_category(data, threshold=.5, device=None):
+def compute_category(data, device=None, **kwargs):
     """Computes the category of the given neurons,
     in the triple format of COMBO_TO_NAME.
     If args are floats: returns a triple
@@ -253,11 +259,11 @@ def compute_category(data, threshold=.5, device=None):
             for key,value in data.items()
         }
         data = moved_data
-    approx_linout = _approx(data["linout"], threshold)
+    approx_linout = _approx(data["linout"], **kwargs)
     if "gateout" in data:
-        approx_gateout = _approx(data["gateout"], threshold)
+        approx_gateout = _approx(data["gateout"], **kwargs)
         typical = torch.where(
-            _approx(data["gatelin"], threshold)==approx_linout*approx_gateout, 1, 0
+            _approx(data["gatelin"], *kwargs)==approx_linout*approx_gateout, 1, 0
         )
         typical = torch.where(
             (approx_linout==0) & (approx_gateout==0), 1, typical
@@ -280,11 +286,31 @@ def is_in_category(category_tensor, category_key):
     Returns:
         tensor: tensor of booleans of shape (layer, neuron)
     """
+    # if isinstance(category_key, str):
+    #     category_key = float(category_key)
     key_tensor = torch.tensor(category_key).to(category_tensor.device)
-    eq = category_tensor==key_tensor
+    eq = torch.isclose(category_tensor, key_tensor)
     if category_tensor.dim()==3 and category_tensor.shape[-1]==3:
         return eq.all(dim=-1)
     return eq
+
+def floats_to_strings(float_list:list[float])->list[str]:
+    return [f"{a:.2f}" for a in float_list]
+
+def make_combo_name_dict(keys:list[float|str], make_string_keys=False)->dict[float, str]:
+    if isinstance(keys[0], float):
+        string_keys = floats_to_strings(keys)
+    else:
+        string_keys = keys
+    if make_string_keys:
+        new_keys=string_keys
+    else:
+        new_keys = keys
+    combo_name_dict = {
+        new_keys[i] : f"{string_keys[i]} $\leq$ cos < {1 if i+1==len(keys) else string_keys[i+1]}"
+        for i in range(len(keys))
+    }
+    return combo_name_dict
 
 def layerwise_count(category_tensor:torch.Tensor):
     """count how often each category appears per layer
@@ -301,8 +327,11 @@ def layerwise_count(category_tensor:torch.Tensor):
     """
     if category_tensor.dim()==3 and category_tensor.shape[-1]==3:
         combo_name_dict = COMBO_TO_NAME
-    else:
+    elif category_tensor.dim()==2 and torch.all(torch.isin(category_tensor, torch.Tensor([-1,0,1]).to(category_tensor.device))):
         combo_name_dict = {key[0]:COMBO_TO_NAME[key] for key in [(1,1,1),(0,0,1),(-1,1,1)]}
+    else:
+        unique = torch.unique(category_tensor).tolist()
+        combo_name_dict = make_combo_name_dict(unique)
     results = {key:torch.zeros(category_tensor.shape[0]) for key in combo_name_dict}
     for key in combo_name_dict:
         results[key] = torch.count_nonzero(is_in_category(category_tensor, key), dim=1)

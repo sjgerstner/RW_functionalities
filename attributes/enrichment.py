@@ -32,7 +32,7 @@ from attributes.utils import (
     decode_tokens,
 )
 from neuron_choice import neuron_choice, get_n_neurons
-from src.utils import NAME_TO_COMBO
+from src.weight_analyis_utils.utils import NAME_TO_COMBO
 from entropy.entropy_intervention_wrap import get_mean_values
 
 if __name__=="__main__":

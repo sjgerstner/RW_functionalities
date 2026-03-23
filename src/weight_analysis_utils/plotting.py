@@ -11,7 +11,7 @@ import einops
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .utils import COMBO_TO_NAME, VANILLA_CATEGORIES
+from .utils import COMBO_TO_NAME, VANILLA_CATEGORIES, make_combo_name_dict, floats_to_strings
 
 torch.set_grad_enabled(False)
 
@@ -73,6 +73,18 @@ ARRANGEMENT_NEEDED_LIST = [
     "plot_fine", "plots_norms", "plot_cosines_vs_norms", "plot_norm_in_norm_out"
 ]
 
+def make_color_dict(category_keys:list[str])->dict[str, tuple[float,float,float,float]]:
+    value_list = np.linspace(-1,1, num=len(category_keys))
+    return {
+        key: (
+            (1-max(0,-value_list[i])),
+            (1-max(0,-value_list[i])),
+            (1-max(0,value_list[i])),
+            abs(value_list[i])**0.5 if value_list[i]<0 else 1,
+        )
+        for i,key in enumerate(category_keys)
+    }
+
 def _short_to_long(key:str)->str:
     if key in SHORT_TO_LONG:
         return SHORT_TO_LONG[key]
@@ -80,8 +92,14 @@ def _short_to_long(key:str)->str:
     combo, metric_type = '_'.join(keys[:-1]), keys[-1]
     return f"{SHORT_TO_LONG[metric_type]} {SHORT_TO_LONG[combo]}"
 
+def make_full_key_list(key_list:list[float])->list[str]:
+    old_len = len(key_list)
+    step_size = min(key_list[i+1]-key_list[i] for i in range(old_len-1))
+    float_list = np.linspace(-1,1, num = round(2/step_size), endpoint=False).tolist()
+    return floats_to_strings(float_list)
+
 def my_survey(
-    results:dict, model_name:str,
+    results:dict, model_name:str|None=None, white_text=True, text_threshold=700,
 ):
     """
     Parameters
@@ -97,21 +115,35 @@ def my_survey(
     category_colors: list of tuples of 4 floats
         The rgba colors corresponding to the categories
     """
+    key_list = list(results.keys())
+    n_layers = results[key_list[0]].numel()
+    original_results_device = results[key_list[0]].device
+    labels = [f'Layer {n}' for n in range(n_layers)]#[0,...,31] if 32 layers
     if (1,1,1) in results.keys():
         names_and_colors, combo_to_name = CATEGORY_COLORS, COMBO_TO_NAME
-        labels = [f'Layer {n}' for n in range(results[(1,1,1)].numel())]#[0,...,31] if 32 layers
     elif 1 in results.keys():
         names_and_colors, combo_to_name = VANILLA_COLORS, VANILLA_CATEGORIES
-        labels = [f'Layer {n}' for n in range(results[1].numel())]#[0,...,31] if 32 layers
     else:
-        raise NotImplementedError(
-            f"The dictionary keys do not seem to correspond to the categories we defined: \
-                {results.keys()}"
-        )
+        for key in key_list:
+            results[f"{key:.2f}"] = results[key]#add string-formatted keys
+        key_list = make_full_key_list(key_list)
+        combo_to_name = make_combo_name_dict(key_list)
+        names_and_colors = make_color_dict(key_list)
+        # raise NotImplementedError(
+        #     f"The dictionary keys do not seem to correspond to the categories we defined: \
+        #         {results.keys()}"
+        # )
     #my preprocessing:
     # labels = list(results.keys())
     # data = np.array(list(results.values()))
-    data = np.array(torch.stack(list(results.values()), dim=-1).cpu())
+    data = np.array(torch.stack(
+        [
+            results[key] if key in results
+            else torch.zeros(n_layers, device=original_results_device)
+            for key in key_list
+        ],
+        dim=-1
+    ).cpu())
 
     data_cum = data.cumsum(axis=1)#cumsum over categories
 
@@ -123,15 +155,14 @@ def my_survey(
     ax.set_xlim(0, np.sum(data, axis=1).max())
 
     for i, (key, color) in enumerate(names_and_colors.items()):
-    #for key in COMBO_TO_NAME:
         widths = data[:,i]
         starts = data_cum[:, i] - widths
         rects = ax.barh(labels, widths, left=starts,
                         #height=0.5,
                         label=combo_to_name[key], color=color)
-        if any(widths>700):
+        if any(widths>text_threshold):
             r, g, b, _ = color
-            text_color = 'black' if (r>.5 or g>.5) else 'white'#TODO
+            text_color = 'black' if (r>.5 or g>.5 or not white_text) else 'white'#TODO
             ax.bar_label(rects, label_type='center', color=text_color,
                          #fontsize='xx-large'
                          )
@@ -141,8 +172,8 @@ def my_survey(
         loc='upper left',
         #fontsize='xx-large'
         )
-
-    ax.set_title(model_name)#TODO do we want that?
+    if model_name is not None:
+        ax.set_title(model_name)
 
     return fig, ax
 
@@ -593,11 +624,23 @@ def plot_cosines_vs_norms(data, keys, arrangement, layer_list:list[int]|None=Non
 def plot_any_vs_any(
     data:dict[str,torch.Tensor],
     keys:tuple[str,str],
-    arrangement,
+    arrangement:tuple[int,int],
     layer_list:list[int]|None=None,
     bounded=(True,True),
-    **kwargs
+    **kwargs, #savefile, absolute, fit_line, eps
 ):
+    """two-dimensional fine-grained heatmap (almost scatter plot)
+
+    Args:
+        data (dict[str,torch.Tensor]): each key describes a quantity, each value is the corresponding tensor (2-d is (layer, neuron), 1-d is just 1 layer)
+        keys (tuple[str,str]): the keys to plot against each other
+        arrangement (tuple[int,int]): the number of rows and columns in the plot (each subplot is a layer)
+        layer_list (list[int] | None, optional): list of layers to plot. Defaults to None (all layers).
+        bounded (tuple, optional): If the quantities in x and y axis are bounded. Defaults to (True,True).
+
+    Returns:
+        fig, ax
+    """
     if data[keys[0]].dim()==2:
         data_by_layer = [
             {key:data[key][layer].cpu() for key in keys}
@@ -674,7 +717,11 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         #cosines vs norms
         if "plot_cosines_vs_norms" in experiments:
             for cosine_key in ["linout", "gateout", "gatelin"]:
+                if cosine_key not in data:
+                    continue
                 for norms in ["norm_gate", "norm_in_out"]:
+                    if norms not in data:
+                        continue
                     fig, _ax = plot_cosines_vs_norms(
                         data, arrangement=arrangement, keys=(cosine_key, norms)
                     )
