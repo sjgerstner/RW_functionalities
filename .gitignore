@@ -11,6 +11,7 @@ intervention_results/
 adapt_df.py
 se/logitlens.pickle
 *.zip
+time_course
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

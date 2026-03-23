@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["version"]
+name = "weight_analysis_utils"
+dependencies = [
+  "scipy",
+  "torch",
+  "einops",
+  "numpy",
+  "pandas",
+  "matplotlib",
+  "seaborn"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
