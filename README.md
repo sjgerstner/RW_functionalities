@@ -17,7 +17,7 @@ Data / results are published separately (TODO link).
   * `*.ipynb`: Analysis of a case of entropy reduction (section 6.3). Was not cleaned up for publication.
 * Activation frequencies (section 7): code in ```freqs.py```
 
-The other files contain other small experiments that we did not include in the paper.
+The other files contain other small experiments that we did not include in the paper, e.g. model generations when ablating a given class of neurons.
 
 ## Steps to reproduce
 
