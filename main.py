@@ -224,7 +224,7 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--work_dir', default='.')
+    parser.add_argument('--work_dir', default='../RW_functionalities_results')
     parser.add_argument(
         '--refactor_glu',
         action='store_true',

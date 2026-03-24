@@ -121,7 +121,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default='.')
     parser.add_argument('--wcos_dir', default='.')
     parser.add_argument(
-        '--output_dir', default='intervention_results')
+        '--output_dir', default='../RW_functionalities_results/intervention_results')
     parser.add_argument('--means_path', default='neuroscope/results/OLMo-7B-0424/summary_refactored.pt')
     parser.add_argument(
         '--model',

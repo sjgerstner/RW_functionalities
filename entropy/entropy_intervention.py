@@ -333,7 +333,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--save_precision', default=16, type=int)
     parser.add_argument(
-        '--output_dir', default='intervention_results')
+        '--output_dir', default='../RW_functionalities_results/intervention_results')
 
     args = parser.parse_args()
 

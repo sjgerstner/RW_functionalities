@@ -3,6 +3,8 @@
 from os.path import exists
 #import pickle
 import random
+
+import pandas as pd
 import torch
 
 from src.weight_analysis_utils.utils import COMBO_TO_NAME, is_in_category, VANILLA_CATEGORIES
@@ -108,7 +110,7 @@ def random_baseline(neuron_list, data_categories, category_key):
 def get_n_neurons(args):
     if args.by_freq:
         n_neurons = int(args.n_neurons)
-        freq_data = pd.read_pickle(f'plots/freq/{args.by_freq}_means.pickle')
+        freq_data = pd.read_pickle(f'{args.work_dir}/{args.wcos_dir}/plots/freq/{args.by_freq}_means.pickle')
         constant_freq = freq_data.loc[args.constant_class]["true"]
         constant = constant_freq * n_neurons
         return n_neurons, constant

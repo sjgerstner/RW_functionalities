@@ -37,8 +37,7 @@ from entropy.entropy_intervention_wrap import get_mean_values
 
 if __name__=="__main__":
     parser = ArgumentParser()
-    parser.add_argument('--work_dir', default='.')
-    parser.add_argument('--wcos_dir', default='.')
+    parser.add_argument('--data_dir', default='../RW_functionalities_results')
     parser.add_argument('--wiki_dir', default='wiki_data')
     parser.add_argument('--means_path', default='neuroscope/results/OLMo-7B-0424/summary_refactored.pt')
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
@@ -111,10 +110,10 @@ if __name__=="__main__":
     # %%
     model = HookedTransformer.from_pretrained(args.model)
     short_model_name = args.model.split('/')[-1]
-    knowns_df = pd.read_json(f'{args.work_dir}/knowns/known_{short_model_name}.json')
+    knowns_df = pd.read_json(f'{args.data_dir}/knowns/known_{short_model_name}.json')
 
     # %%
-    OUT_DIR = f'{args.work_dir}/se'
+    OUT_DIR = f'{args.data_dir}/se'
 
     # %% [markdown]
     # ## Subject enrichment
@@ -220,13 +219,13 @@ if __name__=="__main__":
     # %%
     # Processing of Wikipedia paragraphs for automatic attribute rate evaluation.
 
-    WIKI_CLEANED = f'{args.work_dir}/{args.wiki_dir}/wiki_cleaned.pickle'
+    WIKI_CLEANED = f'{args.data_dir}/{args.wiki_dir}/wiki_cleaned.pickle'
     if not os.path.exists(WIKI_CLEANED):
         # This should be a path to a csv file
         # with 2 columns and a header of column names "subject" and "paragraphs".
         # Each entry should have (a) a subject (string) from the "knowns" data (knowns_df)
         # and (b) paragraphs concatenated with space about the subject (a single string).
-        df_wiki = pd.read_csv(f'{args.work_dir}/{args.wiki_dir}/wiki.csv')
+        df_wiki = pd.read_csv(f'{args.data_dir}/{args.wiki_dir}/wiki.csv')
         df_wiki = df_wiki.fillna('')
         # Tokenize, remove duplicate tokens, stopwords, and subwords.
         df_wiki["context_tokenized_dedup"] = df_wiki["paragraphs"].progress_apply(

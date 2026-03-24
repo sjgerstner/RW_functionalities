@@ -19,7 +19,7 @@ def find_text(
     intervention_type = "zero_ablation",
     metric = "entropy",
     neuron_subset_name = "weakening",
-    data_path = "intervention_results/allenai/OLMo-7B-0424-hf/dolma-small",
+    data_path = "../RW_functionalities_results/intervention_results/allenai/OLMo-7B-0424-hf/dolma-small",
     extremum = "min",
 )-> tuple[int,int]:
     diff_data = unflattened_data(data_path, metric, neuron_subset_name, intervention_type)
@@ -70,7 +70,7 @@ def run_ablated_and_cache(args:Namespace, model:HookedTransformer, input_ids:tor
     logits_ablated = model.run_with_hooks(input_ids, fwd_hooks=hooks)
     return logits_ablated, cache_ablated
 
-def inspect_logit_diff(model, logits_clean, logits_ablated):
+def inspect_logit_diff(model, logits_clean, logits_ablated, pos):
 
     logit_diff = logits_clean - logits_ablated
 
@@ -120,7 +120,7 @@ def inspect_text(
     logits_ablated, cache_ablated = run_ablated_and_cache(args, model, my_input_ids, neuron_list)
 
     # ## Finding relevant tokens
-    inspect_logit_diff(model, logits_clean, logits_ablated)
+    inspect_logit_diff(model, logits_clean, logits_ablated, pos=pos)
     #analyze hidden states
     analyze_hidden_states(model, cache_clean)
     analyze_hidden_states(model, cache_ablated)

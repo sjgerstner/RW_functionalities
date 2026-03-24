@@ -101,8 +101,8 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
 #%%
 if __name__=='__main__':
     parser = ArgumentParser()
-    parser.add_argument('--data_dir', default='.')
-    parser.add_argument('--plot_dir', default='plots/ablations')
+    parser.add_argument('--data_dir', default='../RW_functionalities_results')
+    parser.add_argument('--plot_dir', default='../RW_functionalities_results/plots/ablations')
     parser.add_argument('--experiment_name', type=str)
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument('--dataset', default='dolma-small')
