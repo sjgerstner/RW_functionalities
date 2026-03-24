@@ -1,5 +1,7 @@
 # Software for the RW functionalities paper (weakening neurons)
 
+**Attention:** On March 23, 2026, I rewrote the history of this repository to more cleanly separate code from data (and thus get rid of Git LFS). If you cloned the repository before that date, **do not pull changes!** Instead, make a fresh clone and work from there.
+
 Data / results are published separately (TODO link).
 
 ## Structure
@@ -60,7 +62,7 @@ wget https://rome.baulab.info/data/dsets/known_1000.json
 cd ../wiki_data
 wget https://archive.org/download/enwiki-20211020/enwiki-20211020-pages-articles-multistream-index.txt.bz2
 wget https://archive.org/download/enwiki-20211020/enwiki-20211020-pages-articles-multistream.xml.bz2
-cd ../../RW_functionalities #back to this repo
+cd ../../RW_functionalities #back to the code repo
 ```
 
 Filter ```known_1000``` to the items known by OLMo-7B-0424 (the model of interest):
