@@ -1,29 +1,23 @@
-# Software and data for the RW functionalities paper (weakening neurons)
+# Software for the RW functionalities paper (weakening neurons)
+
+Data / results are published separately (TODO link).
 
 ## Structure
 
 * ```TransformerLens/``` (submodule): a fork of TransformerLens that supports OLMo.
 * ```neuroscope/``` (submodule): Code and results for activation-based neuron case studies. Contains the dataset ```neuroscope/datasets/dolma-small/```.
-* ```interactive.ipynb```: interactive vector visualisations of RW classes (may help to understand section 2.2 with the definitions of RW functionalities).
-* Statistics of RW functionalities (section 3 in the submission):
-  * Code is in the top-level directory:
-    * ```utils.py``` and ```plotting.py``` contain helper functions
-    * ```main.py```: Run this to reproduce the section. There are options for each sub-experiment (see the argparse part of the code).
-  * Results are in ```results/```.
-* Ablation experiments (section 4):
+* `src/weight_analysis_utils` (installable package): utilities for weight analysis, incl. plotting.
+* ```interactive.ipynb```: interactive vector visualisations of RW classes. This may help to understand the definitions of the different RW classes in section 4.2 (of the ICML submission).
+* Statistics of RW functionalities (section 5 in the ICML submission): Run ```main.py``` to reproduce the section. There are options for each sub-experiment (see the argparse part of the code).
+* Ablation experiments (section 6):
   * attributes rate:
     * main code in ```attributes/```
-    * Wikipedia data for subject-attribute mappings: code in ```wiki/``` and data in ```wiki_data/```
-    * data to run the model on: ```knowns/```
-    * machine-readable results in ```se/logitlens.pickle```
-    * plots in ```plots/ablations/``` (all the ```attributes.pdf``` files)
-  * other metrics (entropy etc.), incl. conditional ablations:
-    * bash script that runs all the modified models: ```entropy_interventions.sh```. It calls the code in ```entropy/```.
-    * machine-readable results in ```intervention_results/```
-    * plots in ```plots/ablations/``` (files named ```entropy.pdf``` etc.)
-* Activation frequencies (section 5):
-  * code in ```freqs.py```
-  * plots in ```plots/freq/```
+    * ```wiki/```: code for producing the Wikipedia data used for subject-attribute mappings
+  * other metrics (entropy etc.), incl. conditional ablations: The bash script ```entropy_interventions.sh``` runs all the edited models. It calls the code in ```entropy/```.
+  * `*.ipynb`: Analysis of a case of entropy reduction (section 6.3). Was not cleaned up for publication.
+* Activation frequencies (section 7): code in ```freqs.py```
+
+The other files contain other small experiments that we did not include in the paper.
 
 ## Steps to reproduce
 
@@ -38,9 +32,7 @@ git submodule init --recursive
 pip install -e TransformerLens
 ```
 
-The last line will change some of the package versions
-(no combination was perfectly compatible),
-but the behaviour is fine anyway.
+You can ignore the version conflicts.
 
 ### Section 3 (RW functionalities by layer)
 
@@ -63,12 +55,12 @@ You can skip this because we provide the resulting data.
 Get the online datasets:
 
 ```[bash]
-cd knowns
+cd ../RW_functionalities_results/knowns
 wget https://rome.baulab.info/data/dsets/known_1000.json
 cd ../wiki_data
 wget https://archive.org/download/enwiki-20211020/enwiki-20211020-pages-articles-multistream-index.txt.bz2
 wget https://archive.org/download/enwiki-20211020/enwiki-20211020-pages-articles-multistream.xml.bz2
-cd ..
+cd ../../RW_functionalities #back to this repo
 ```
 
 Filter ```known_1000``` to the items known by OLMo-7B-0424 (the model of interest):
@@ -114,6 +106,8 @@ python -m entropy.compare --experiment_name 24 --neurons strengthening24 "condit
 python -m entropy.compare --experiment_name 243 --neurons "conditional strengthening243" "proportional change243" "conditional weakening243" weakening
 python -m entropy.compare --experiment_name weakening_complete --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post-
 ```
+
+Finally, for the case study of entropy reduction, see the ipynb files (they are a bit chaotic, sorry).
 
 ### Section 5 (Activation frequencies)
 
