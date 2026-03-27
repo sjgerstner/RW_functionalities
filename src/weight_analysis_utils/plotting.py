@@ -127,7 +127,7 @@ def my_survey(
         for key in key_list:
             results[f"{key:.2f}"] = results[key]#add string-formatted keys
         key_list = make_full_key_list(key_list)
-        combo_to_name = make_combo_name_dict(key_list)
+        combo_to_name = make_combo_name_dict(key_list, make_string_keys=False)
         names_and_colors = make_color_dict(key_list)
         # raise NotImplementedError(
         #     f"The dictionary keys do not seem to correspond to the categories we defined: \

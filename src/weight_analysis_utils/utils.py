@@ -297,7 +297,7 @@ def is_in_category(category_tensor, category_key):
 def floats_to_strings(float_list:list[float])->list[str]:
     return [f"{a:.2f}" for a in float_list]
 
-def make_combo_name_dict(keys:list[float|str], make_string_keys=False)->dict[float, str]:
+def make_combo_name_dict(keys:list[float|str], make_string_keys=False)->dict[float|str, str]:
     if isinstance(keys[0], float):
         string_keys = floats_to_strings(keys)
     else:
