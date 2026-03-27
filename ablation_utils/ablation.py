@@ -6,7 +6,7 @@ from transformer_lens import HookedTransformer
 # Utilities
 from neuron_choice import neuron_choice, get_n_neurons
 from src.weight_analyis_utils.utils import NAME_TO_COMBO
-from ablation_utils.utils import get_mean_values, make_neuron_hooks
+from .utils import get_mean_values, make_neuron_hooks
 
 torch.set_grad_enabled(False)
 

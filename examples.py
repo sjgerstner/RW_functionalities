@@ -6,7 +6,7 @@ import torch
 import datasets
 from transformer_lens import HookedTransformer, ActivationCache
 
-from ablation import generate_and_save
+from ablation_utils.generate import generate_and_save
 from entropy.compare import unflattened_data
 from ablation_utils.utils import make_hooks
 from neuron_choice import neuron_choice
@@ -111,6 +111,7 @@ def inspect_text(
     print(model.to_single_str_token(my_input_ids[pos+1].item()))
 
     # ## List of relevant neurons
+    #TODO this is super ugly, so change the find_neurons and run_ablated_and_cache functions to admit **kwargs
     args = create_args(**kwargs)
     neuron_list = find_neurons(args)
 
@@ -125,7 +126,7 @@ def inspect_text(
     analyze_hidden_states(model, cache_clean)
     analyze_hidden_states(model, cache_ablated)
 
-def inspect_generations(#TODO include this function in the analysis
+def inspect_generations(
     args:Namespace,
     model:HookedTransformer,
     save_path:str|os.PathLike,
@@ -158,6 +159,16 @@ def main(list_of_kwargs_dicts:list[dict]=[]):
     text_dataset = datasets.load_from_disk('neuroscope/datasets/dolma-small')
     for kwargs in list_of_kwargs_dicts:
         inspect_text(model, text_dataset, **kwargs)
+    #TODO write outputs to a text file?
+    #TODO include:
+    # - inspect_generations()
+    # - position-wise ablations
+    # - is there a single neuron *directly* responsible for a given effect? -> logit lens on w_out of neurons as in entropy_example.ipynb
+    # - inspecting direct path as in 2025-12-18-paths.ipynb
+    # - finding relevant neurons and/or token positions for a given effect -> fine-grained ablations as in 2025-12-17-final_layer.ipynb,
+    #       including ablating several neurons/positions together.
+    #       But this is super inefficient
+    #       -> use EAP or similar to find neuron-position pairs that are likely to be relevant, and then ablate the top-n ones to check
 
 #%%
 if __name__=="__main__":
