@@ -125,7 +125,7 @@ def inspect_text(
     analyze_hidden_states(model, cache_clean)
     analyze_hidden_states(model, cache_ablated)
 
-def inspect_generations(
+def inspect_generations(#TODO include this function in the analysis
     args:Namespace,
     model:HookedTransformer,
     save_path:str|os.PathLike,

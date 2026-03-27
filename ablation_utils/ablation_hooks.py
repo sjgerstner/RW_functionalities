@@ -1,3 +1,14 @@
+"""
+All of these functions are copied from the file intervention.py in https://github.com/wesg52/universal-neurons,
+except fixed_activation_hook() which is largely inspired by the other functions.
+
+Accordingly, the copyright and license from the original repo apply:
+
+MIT License
+
+Copyright (c) 2023 Wes Gurnee
+"""
+
 import torch
 
 def multiply_activation_hook(activations, hook, neuron, multiplier=1):

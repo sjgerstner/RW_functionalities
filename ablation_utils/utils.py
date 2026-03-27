@@ -31,7 +31,10 @@ def get_mean_values(args):
     return mean_values
 
 def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:float=0.0, positions:torch.Tensor|None=None):
-    """Adapted from Gurnee et al.
+    """Adapted from https://github.com/wesg52/universal-neurons,
+    hence original license and copyright apply:
+    MIT License
+    Copyright (c) 2023 Wes Gurnee
 
     Args:
         args (_type_): _description_
@@ -127,7 +130,12 @@ def conditional_ablation_hook(
 
 
 def ablation_hook(activation, hook, args, neuron=None, mask=None, mean_value:float=0.0):
-    """Branch to the right intervention type based on args.intervention_type"""
+    """Branch to the right intervention type based on args.intervention_type
+    Adapted from https://github.com/wesg52/universal-neurons,
+    hence original license and copyright apply:
+    MIT License
+    Copyright (c) 2023 Wes Gurnee
+    """
     if mask is None:
         mask=torch.ones(size=activation.shape[:-1], dtype=torch.bool)
     if args.intervention_type == 'zero_ablation':
