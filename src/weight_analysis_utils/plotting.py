@@ -159,7 +159,8 @@ def my_survey(
         starts = data_cum[:, i] - widths
         rects = ax.barh(labels, widths, left=starts,
                         #height=0.5,
-                        label=combo_to_name[key], color=color)
+                        label=combo_to_name[key], color=color,
+                        edgecolor="black")
         if any(widths>text_threshold):
             r, g, b, _ = color
             text_color = 'black' if (r>.5 or g>.5 or not white_text) else 'white'#TODO
