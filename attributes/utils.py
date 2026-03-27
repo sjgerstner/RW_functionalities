@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from entropy.entropy_intervention import make_hooks
+from ablation_utils.utils import make_neuron_hooks
 
 #%%
 #from the utils.py of Geva et al, Dissecting Recall
@@ -47,21 +47,6 @@ def find_token_range(tokenizer, token_array, substring):
 
 #%%
 #inspired by Gurnee et al., Universal Neurons
-#new but boring:
-# def make_layer_hooks(args, layer_list):
-#     hooks = []
-#     for layer in layer_list:
-#         hooks += make_hooks(args, layer)
-#     return hooks
-def make_neuron_hooks(args, neuron_list, mean_values:torch.Tensor|None=None):
-    hooks = []
-    if neuron_list is not None:
-        for layer,neuron in neuron_list:
-            hooks.extend(make_hooks(
-                args, layer, neuron,
-                mean_value=mean_values[layer,neuron].item() if mean_values is not None else 0,
-            ))
-    return hooks
 
 def caching_hook(res, hook, cache):
     cache[:,hook.layer(),:] = res

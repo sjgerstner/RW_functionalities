@@ -8,27 +8,7 @@ from transformer_lens import HookedTransformer
 from entropy.entropy_intervention import run_intervention_experiment
 from neuron_choice import neuron_choice
 from src.weight_analyis_utils.utils import NAME_TO_COMBO
-
-def get_mean_values(args):
-    summary_dict = torch.load(args.means_path, map_location=args.device)
-    relevant_gate_signs=[args.gate] if args.gate else ['+','-']
-    relevant_post_signs=[args.post] if args.post and args.gate else ['+','-']
-    relevant_cases_post = [
-        f'gate{gate_sign}_post{post_sign}'
-        for gate_sign in relevant_gate_signs for post_sign in relevant_post_signs
-    ]
-    relevant_cases_in = [
-        post_string.replace('post', 'in') if post_string.startswith('gate+')
-        else post_string.replace('post+', 'in-').replace('post-', 'in+')
-        for post_string in relevant_cases_post
-    ]
-    mean_values = torch.sum(torch.stack([
-            summary_dict[(case_key,'freq')]*torch.nan_to_num(summary_dict[(case_key, 'hook_post', 'sum')])
-            for case_key in relevant_cases_in
-        ], dim=0), dim=0) / torch.sum(torch.stack([
-            summary_dict[case_key,'freq'] for case_key in relevant_cases_in
-        ], dim=0), dim=0)
-    return mean_values
+from ablation_utils.utils import get_mean_values
 
 def run_with_baseline(
     args,

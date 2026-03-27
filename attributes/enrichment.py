@@ -33,7 +33,7 @@ from attributes.utils import (
 )
 from neuron_choice import neuron_choice, get_n_neurons
 from src.weight_analyis_utils.utils import NAME_TO_COMBO
-from entropy.entropy_intervention_wrap import get_mean_values
+from ablation_utils.utils import get_mean_values
 from wiki.clean_df import clean_and_save_df
 
 if __name__=="__main__":

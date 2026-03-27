@@ -35,148 +35,19 @@ import datasets
 import argparse
 # import numpy as np
 # import pandas as pd
-from functools import partial
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from transformers import DataCollatorWithPadding
 from transformer_lens import HookedTransformer
 from transformer_lens.utils import lm_cross_entropy_loss
 
+from ablation_utils.utils import make_hooks
+
 from .utils import get_model_family
 from .activations import get_correct_token_rank
-from .intervention import (
-    #zero_ablation_hook,
-    threshold_ablation_hook,
-    relu_ablation_hook,
-    fixed_activation_hook,
-    #quantize_neurons
-    #masked_zero_ablation_hook,
-)
-
-def multiply_activation_hook(activations, hook, neuron, multiplier=1):
-    activations[:, :, neuron] = activations[:, :, neuron] * multiplier
-    return activations
 
 def save_layer_norm_scale_hook(activations, hook):
     hook.ctx['activation'] = activations.detach().cpu()
-
-
-def store_conditioning_hook(activation, hook, conditioning_values, neuron=None, sign=1):
-    """Store the conditioning activation"""
-    if neuron is not None:
-        conditioning_values[hook.name] = activation[:,:,neuron].clone()
-        if sign<0:
-            conditioning_values[hook.name] *=-1
-    else:
-        conditioning_values[hook.name] = activation.clone()
-
-
-def conditional_ablation_hook(
-    activation:torch.Tensor,
-    hook,
-    args,
-    conditioning_value:dict[str, torch.Tensor],
-    neuron=None,
-    mean_value:float=0.0,
-    positions:torch.Tensor|None=None
-):
-    """Ablate based on conditioning activation"""
-    hook_loc = '.'.join(hook.name.split('.')[:-1])
-    gate_loc = hook_loc+'.hook_pre'
-    post_loc = hook_loc+'.hook_post'
-    condition = torch.ones(activation.shape[:-1], dtype=torch.bool, device=activation.device)
-    if gate_loc in conditioning_value:
-        if args.gate=='+':
-            condition = conditioning_value[gate_loc]>0
-        elif args.gate=='-':
-            condition = conditioning_value[gate_loc]<0
-        else:
-            raise NotImplementedError("argument 'gate' has to be + or -")
-    if post_loc in conditioning_value:
-        # if condition is None:
-        #     condition = torch.ones_like(conditioning_value[post_loc])
-        if args.post=='+':
-            condition = torch.logical_and(condition, conditioning_value[post_loc]>0)
-        elif args.post=='-':
-            condition = torch.logical_and(condition, conditioning_value[post_loc]<0)
-        else:
-            raise NotImplementedError("argument 'post' has to be + or -")
-    #optionally, ablate only at given positions
-    if positions is not None:
-        position_mask = torch.zeros(activation.shape[:-1],dtype=torch.bool, device=activation.device)
-        position_mask[:,positions]=True
-        condition = torch.logical_and(condition, position_mask)
-    activation = ablation_hook(activation, hook, args, neuron=neuron, mask=condition, mean_value=mean_value)
-    return activation
-
-def ablation_hook(activation, hook, args, neuron=None, mask=None, mean_value:float=0.0):
-    """Branch to the right intervention type based on args.intervention_type"""
-    if mask is None:
-        mask=torch.ones(size=activation.shape[:-1], dtype=torch.bool)
-    if args.intervention_type == 'zero_ablation':
-        # if mask is not None:
-        #     activation = masked_zero_ablation_hook(activation,hook,neuron,mask)
-        #else:
-        activation = fixed_activation_hook(activation, hook, neuron=neuron, mask=mask, fixed_act=0)
-    elif args.intervention_type == 'mean_ablation':
-        activation = fixed_activation_hook(activation, hook, neuron=neuron, mask=mask, fixed_act=mean_value)
-    elif args.intervention_type == 'fixed_activation':
-        activation = fixed_activation_hook(
-            activation, hook,
-            neuron=neuron,
-            fixed_act=args.intervention_param
-        )
-    #TODO implement mask for the other intervention types
-    elif args.intervention_type == 'threshold_ablation':
-        activation = threshold_ablation_hook(
-            activation, hook, neuron=neuron,
-            threshold=args.intervention_param
-        )
-    elif args.intervention_type == 'relu_ablation':
-        activation = relu_ablation_hook(activation, hook, neuron=neuron)
-
-    elif args.intervention_type == 'multiply_activation':
-        activation = multiply_activation_hook(
-            activation, hook,
-            neuron=neuron,
-            multiplier=args.intervention_param)
-    else:
-        raise ValueError(
-            f'Unknown intervention type: {args.intervention_type}')
-    return activation
-
-def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:float=0.0, positions:torch.Tensor|None=None):
-    if conditioning_value is None:
-        conditioning_value = {}
-    out = []
-
-    if args.gate is not None:
-        hook_loc = f'blocks.{layer}.mlp.hook_pre'
-        hook_fn = partial(
-            store_conditioning_hook,
-            conditioning_values=conditioning_value, neuron=neuron
-        )
-        out.append((hook_loc, hook_fn))
-    if args.post is not None:
-        hook_loc = f'blocks.{layer}.mlp.hook_post'
-        hook_fn = partial(
-            store_conditioning_hook,
-            conditioning_values=conditioning_value, neuron=neuron,
-            sign=sign,
-        )
-        out.append((hook_loc, hook_fn))
-
-    hook_fn = partial(
-        conditional_ablation_hook,
-        conditioning_value=conditioning_value,
-        args=args, neuron=neuron, mean_value=mean_value,
-        positions=positions)
-
-    hook_loc = f'blocks.{layer}.{args.activation_location}'
-    out.append((hook_loc, hook_fn))
-
-    return out
-
 
 def run_intervention_experiment(
     args,
