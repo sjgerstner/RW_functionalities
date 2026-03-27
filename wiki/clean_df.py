@@ -3,8 +3,9 @@ import nltk
 from nltk.corpus import stopwords
 import pandas as pd
 from transformer_lens import HookedTransformer #TODO we just need the tokeniser!
+from transformers import PreTrainedTokenizerFast
 
-def clean_df(df_wiki:pd.DataFrame, model:HookedTransformer, stopwords0_:dict[str,str]):
+def clean_df(df_wiki:pd.DataFrame, model_or_tokenizer:HookedTransformer|PreTrainedTokenizerFast, stopwords0_:dict[str,str]):
     """
     From a dataframe of subjects and paragraphs, do tokenisation and deduplication.
     
@@ -24,10 +25,20 @@ def clean_df(df_wiki:pd.DataFrame, model:HookedTransformer, stopwords0_:dict[str
     Returns:
         pd.DataFrame: The cleaned dataframe (with tokenized and deduped attributes)
     """
+    if isinstance(model_or_tokenizer, HookedTransformer):
+        def tokenize(x:str)->list[str]:
+            return list(set(model_or_tokenizer.to_str_tokens(x)))
+    elif isinstance(model_or_tokenizer, PreTrainedTokenizerFast):
+        def tokenize(x:str)->list[str]:
+            return list(set(model_or_tokenizer.batch_decode(model_or_tokenizer.encode(x))))
+    else:
+        raise TypeError(
+            f"model_or_tokenizer should be HookedTransformer or PreTrainedTokenizerFast, but is {type(model_or_tokenizer)}"
+        )
     df_wiki = df_wiki.fillna('')
     # Tokenize, remove duplicate tokens, stopwords, and subwords.
     df_wiki["context_tokenized_dedup"] = df_wiki["paragraphs"].progress_apply(
-        lambda x: list(set(model.to_str_tokens(x)))
+        tokenize
     )
     df_wiki["context_tokenized_dedup_len"] = df_wiki.context_tokenized_dedup.apply(
         len#lambda x: len(x)
@@ -43,15 +54,15 @@ def clean_df(df_wiki:pd.DataFrame, model:HookedTransformer, stopwords0_:dict[str
     )
     return df_wiki
 
-def clean_and_save_df(path:str, model_name:str, stopwords0_:dict[str,str]):
+def clean_and_save_df(path:str, model_or_tokenizer:HookedTransformer|PreTrainedTokenizerFast, stopwords0_:dict[str,str], model_name="cleaned"):
     # This should be a path to a csv file
     # with 2 columns and a header of column names "subject" and "paragraphs".
     # Each entry should have (a) a subject (string) from the "knowns" data (knowns_df)
     # and (b) paragraphs concatenated with space about the subject (a single string).
     df_wiki = pd.read_csv(f'{path}/wiki.csv')
-    model = HookedTransformer.from_pretrained(model_name)
-    df_wiki = clean_df(df_wiki, model, stopwords0_)
-    df_wiki.to_pickle(f'{path}/wiki_{model}.pickle')
+    df_wiki = clean_df(df_wiki, model_or_tokenizer, stopwords0_)
+    df_wiki.to_pickle(f'{path}/wiki_{model_name}.pickle')
+    return df_wiki
 
 if __name__=="__main__":
     parser = ArgumentParser()
@@ -62,4 +73,5 @@ if __name__=="__main__":
     nltk.download('stopwords')
     stopwords0_ = stopwords.words('english')
     stopwords0_ = {word: "" for word in stopwords0_}#TODO this was copied from Geva et al., but is it necessary?
-    clean_and_save_df(path=args.data_dir, model_name=args.model_name, stopwords0_=stopwords0_)
+    tokenizer = PreTrainedTokenizerFast.from_pretrained(args.model_name)
+    df_wiki = clean_and_save_df(path=args.data_dir, model_name=args.model_name, stopwords0_=stopwords0_, model_or_tokenizer=tokenizer)

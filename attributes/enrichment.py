@@ -34,6 +34,7 @@ from attributes.utils import (
 from neuron_choice import neuron_choice, get_n_neurons
 from src.weight_analyis_utils.utils import NAME_TO_COMBO
 from entropy.entropy_intervention_wrap import get_mean_values
+from wiki.clean_df import clean_and_save_df
 
 if __name__=="__main__":
     parser = ArgumentParser()
@@ -221,29 +222,12 @@ if __name__=="__main__":
 
     WIKI_CLEANED = f'{args.data_dir}/{args.wiki_dir}/wiki_cleaned.pickle'
     if not os.path.exists(WIKI_CLEANED):
-        # This should be a path to a csv file
-        # with 2 columns and a header of column names "subject" and "paragraphs".
-        # Each entry should have (a) a subject (string) from the "knowns" data (knowns_df)
-        # and (b) paragraphs concatenated with space about the subject (a single string).
-        df_wiki = pd.read_csv(f'{args.data_dir}/{args.wiki_dir}/wiki.csv')
-        df_wiki = df_wiki.fillna('')
-        # Tokenize, remove duplicate tokens, stopwords, and subwords.
-        df_wiki["context_tokenized_dedup"] = df_wiki["paragraphs"].progress_apply(
-            lambda x: list(set(model.to_str_tokens(x)))
+        df_wiki = clean_and_save_df(
+            path=f'{args.data_dir}/{args.wiki_dir}',
+            model_or_tokenizer=model,
+            stopwords0_=stopwords0_,
+            model_name="cleaned",#TODO change this if running on several models (also in the definition of WIKI_CLEANED)
         )
-        df_wiki["context_tokenized_dedup_len"] = df_wiki.context_tokenized_dedup.apply(
-            len#lambda x: len(x)
-        )
-        df_wiki["context_tokenized_dedup_no-stopwords"] = df_wiki.context_tokenized_dedup.apply(
-            lambda x: [
-                y for y in x
-                if y.strip() not in stopwords0_ and len(y.strip())>2
-            ]
-        )
-        df_wiki["context_tokenized_dedup_no-stopwords_len"] = df_wiki["context_tokenized_dedup_no-stopwords"].apply(
-            len#lambda x: len(x)
-        )
-        df_wiki.to_pickle(WIKI_CLEANED)
     else:
         df_wiki = pd.read_pickle(WIKI_CLEANED)
 
