@@ -6,9 +6,9 @@ import torch
 import datasets
 from transformer_lens import HookedTransformer, ActivationCache
 
-from ablation_utils.generate import generate_and_save
 from entropy.compare import unflattened_data
 from ablation_utils.utils import make_hooks
+from ablation_utils.generate import generate_and_save
 from neuron_choice import neuron_choice
 from src.weight_analysis_utils.utils import NAME_TO_COMBO
 
