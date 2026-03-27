@@ -2,7 +2,7 @@
 
 **Attention:** On March 23, 2026, I rewrote the history of this repository to more cleanly separate code from data (and thus get rid of Git LFS). If you cloned the repository before that date, **do not pull changes!** Instead, make a fresh clone and work from there.
 
-Data / results are published separately (TODO link).
+Data / results are published separately (TODO links).
 
 ## Structure
 
