@@ -14,6 +14,7 @@ def generate_ablated(
     args,
     model:HookedTransformer,
     neuron_subset:list,
+    prompt:str|torch.Tensor="<|endoftext|>",
     mean_values:torch.Tensor|None=None,
     **generate_kwargs,
     )->str:
@@ -23,7 +24,7 @@ def generate_ablated(
     for hook in hooks:
         model.add_hook(*hook)
     text = model.generate(
-        "<|endoftext|>",
+        prompt,
         return_type="str",
         **generate_kwargs
     )
