@@ -136,6 +136,7 @@ def ablation_hook(activation, hook, args, neuron=None, mask=None, mean_value:flo
     MIT License
     Copyright (c) 2023 Wes Gurnee
     """
+    #TODO replace args by args.intervention_type
     if mask is None:
         mask=torch.ones(size=activation.shape[:-1], dtype=torch.bool)
     if args.intervention_type == 'zero_ablation':

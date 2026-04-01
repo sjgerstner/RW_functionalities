@@ -39,7 +39,7 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
     """
     #category_index = CATEGORY_NAMES.index(category_name)
     random.seed(2512800)
-    path = f"{args.work_dir}/{args.wcos_dir}/results/{args.model}"
+    path = f"{args.data_dir}/results/{args.model}"#TODO add data_dir to the files that call neuron_choice
     # with open(f"{path}/data.pickle", 'rb') as f:
     #     data = pickle.load(f)
     data_path = f"{path}/data.pt"

@@ -62,7 +62,8 @@ def find_texts(
 
 def create_args(**kwargs):
     return Namespace(
-        work_dir='.', wcos_dir='.',
+        work_dir='.', wcos_dir='.',#TODO do we need these two?
+        data_dir="../RW_functionalities_results",
         model='allenai/OLMo-7B-0424-hf',
         #gate='-', post='+',
         activation_location='mlp.hook_post',
@@ -101,7 +102,7 @@ def run_ablated_and_cache(args:Namespace, model:HookedTransformer, input_ids:tor
     logits_ablated = model.run_with_hooks(input_ids, fwd_hooks=hooks)
     return logits_ablated, cache_ablated
 
-def inspect_logit_diff(model, logits_clean, logits_ablated, pos):
+def inspect_logit_diff(model:HookedTransformer, logits_clean:torch.Tensor, logits_ablated:torch.Tensor, pos):
 
     logit_diff = logits_clean - logits_ablated
 
@@ -112,10 +113,10 @@ def inspect_logit_diff(model, logits_clean, logits_ablated, pos):
 
     results = []
     results.append("top tokens promoted by the neurons (overall effect):")
-    results.append(model.to_str_tokens(top.indices))
+    results.extend(model.to_str_tokens(top.indices))#TODO
 
     results.append("top tokens suppressed by the neurons (overall effect):")
-    results.append(model.to_str_tokens(bottom.indices))
+    results.extend(model.to_str_tokens(bottom.indices))#TODO
     return "\n".join(results)
 
 def analyze_hidden_states(model:HookedTransformer, cache:ActivationCache|dict[str,torch.Tensor]):
@@ -143,7 +144,7 @@ def show_single_text(
 ):
     results = []
     results.append("Input tokens:")
-    results.append(model.to_str_tokens(input_ids[:pos+1]))
+    results.append(str(model.to_str_tokens(input_ids[:pos+1])))#TODO
     results.append("Ground-truth output token:")
     results.append(model.to_single_str_token(input_ids[pos+1].item()))
     if max_new_tokens>1:
@@ -151,22 +152,26 @@ def show_single_text(
         results.append(model.to_str(input_ids[pos+1:pos+1+max_new_tokens]))
 
     # ## Running the model on the example
+    print("running clean model...")
     logits_clean, cache_clean = model.run_with_cache(input_ids[:pos+1])
     results.append("\nThe clean model outputs:")
-    argmax_token_clean = torch.argmax(logits_clean[0,pos])
+    argmax_token_clean = torch.argmax(logits_clean[0,pos]).item()
     results.append(model.to_single_str_token(argmax_token_clean))
-    results.append("with score", logits_clean[0,pos,argmax_token_clean])
+    results.append(f"with score {logits_clean[0,pos,argmax_token_clean].item()}")
     if max_new_tokens>1:
+        print("generating...")
         results.append("The clean model generates (greedily):")
         results.append(model.generate(input_ids[:pos+1], max_new_tokens=max_new_tokens, do_sample=False))
 
     #same with ablated model
-    logits_ablated, cache_ablated = run_ablated_and_cache(args, model, input_ids, neuron_list)
+    print("running ablated model...")
+    logits_ablated, cache_ablated = run_ablated_and_cache(args, model, input_ids[:pos+1], neuron_list)
     results.append("\nThe ablated model outputs:")
-    argmax_token_ablated = torch.argmax(logits_ablated[0,pos])
+    argmax_token_ablated = torch.argmax(logits_ablated[0,pos]).item()
     results.append(model.to_single_str_token(argmax_token_ablated))
-    results.append("with score", logits_ablated[0,pos,argmax_token_ablated])
+    results.append(f"with score {logits_ablated[0,pos,argmax_token_ablated].item()}")
     if max_new_tokens>1:
+        print("generating...")
         results.append("The ablated model generates (greedily):")
         results.append(generate_ablated(
             args=args,
@@ -178,6 +183,7 @@ def show_single_text(
         ))
 
     # ## Which tokens were boosted or suppressed?
+    print("inspect logit diff...")
     results.append(inspect_logit_diff(model, logits_clean, logits_ablated, pos=pos))
     result_str = "\n".join(results)
     if return_cache:
@@ -187,7 +193,7 @@ def show_single_text(
 def show_texts(
     model:HookedTransformer,
     text_dataset,
-    output_path,
+    output_path=None,
     **kwargs
 ):
     indices = find_texts(**kwargs)#first column is index in dataset, second column is position
@@ -240,7 +246,7 @@ def inspect_generations(
 def main(list_of_kwargs_dicts:list[dict]=[]):
     model = HookedTransformer.from_pretrained(
         'allenai/OLMo-7B-0424-hf',
-        #refactor_glu=True
+        #refactor_glu=True TODO do we need this?
     )
     text_dataset = datasets.load_from_disk('neuroscope/datasets/dolma-small')
     for kwargs in list_of_kwargs_dicts:
@@ -267,7 +273,7 @@ def main(list_of_kwargs_dicts:list[dict]=[]):
         #for the record (probably not necessary):
         # - is there a single neuron *directly* responsible for a given effect? -> logit lens on w_out of neurons as in entropy_example.ipynb
         # - inspecting direct path (are the neurons jointly directly responsible) as in 2025-12-18-paths.ipynb
-        with open(output_path, 'a', encoding='utf-8') as output_file:
+        with open(output_path, 'w', encoding='utf-8') as output_file:
             output_file.write("\n".join(results))
 
 #%%
@@ -276,3 +282,4 @@ if __name__=="__main__":
     # kwargs should contain at least:
     # neuron_subset_name, intervention_type, other args of find_texts, topk (i.e. top-k texts), metric (e.g. entropy),
     # and the args properties (other than directories, model_name, activation_location) of find_neurons and show_single_text
+    # minus dirs, model, activation_location

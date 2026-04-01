@@ -26,13 +26,13 @@ import torch
 from tqdm import tqdm
 from transformer_lens import HookedTransformer
 # Utilities
+from weight_analysis_utils.utils import NAME_TO_COMBO
 from attributes.utils import (
     find_token_range,
     record_logitlens,
     decode_tokens,
 )
 from neuron_choice import neuron_choice, get_n_neurons
-from src.weight_analyis_utils.utils import NAME_TO_COMBO
 from ablation_utils.utils import get_mean_values
 from wiki.clean_df import clean_and_save_df
 

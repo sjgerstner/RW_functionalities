@@ -5,7 +5,11 @@ import os
 
 import torch
 
-from src.weight_analyis_utils.plotting import aligned_histograms
+# import sys
+# print(sys.path)
+# sys.path.append('/mounts/work/sgerstner/RW_functionalities/src')
+
+from weight_analysis_utils import plotting
 
 #%%
 def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation')->torch.Tensor:
@@ -88,7 +92,7 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
     if args.log:
         kwargs["log"]=True
     metric = "log_scale" if metric=='scale' else metric
-    aligned_histograms(
+    plotting.aligned_histograms(
         list_data,
         subtitles=subtitles,
         savefile=f'{experiment_dir}/{metric}{"_log" if args.log else ""}.pdf',
