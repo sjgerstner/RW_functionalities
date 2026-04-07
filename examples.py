@@ -1,5 +1,6 @@
 from argparse import Namespace
 from functools import partial
+from json import dumps
 import os
 
 import torch
@@ -78,45 +79,47 @@ def find_neurons(args:Namespace)->list[tuple]:
         baseline=False,
     )
 
-def run_ablated_and_cache(args:Namespace, model:HookedTransformer, input_ids:torch.Tensor, neuron_list:list[tuple]):
-    cache_ablated = {}
+def list_ablation_hooks(args:Namespace, neuron_list:list[tuple]):
     hooks = []
-    #conditioning_values = {}
     for lix, nix in neuron_list:
-        #conditioning_values[(lix,nix)]={}
         hooks.extend(make_hooks(
             args,
             lix, nix,
-            #conditioning_value=conditioning_values[(lix,nix)],
-            #sign=(model.W_gate[lix,:,nix]@model.W_in[lix,:,nix]).item(),
             mean_value=0.0,#TODO mean values
         ))
-    for layer in range(model.cfg.n_layers):
-        for sublayer in ['mid', 'post']:
-            hooks.append((
-                f'blocks.{layer}.hook_resid_{sublayer}',
-                partial(store_activation_hook, cache_dict=cache_ablated)
-            ))
-    #results.append(hooks)
+    return hooks
 
-    logits_ablated = model.run_with_hooks(input_ids, fwd_hooks=hooks)
+def run_ablated_and_cache(args:Namespace, model:HookedTransformer, input_ids:torch.Tensor, neuron_list:list[tuple]):
+    #cache_ablated = {}
+    hooks = list_ablation_hooks(args, neuron_list)
+    # for layer in range(model.cfg.n_layers):
+    #     for sublayer in ['hook_resid_mid', 'mlp.hook_pre', 'mlp.hook_pre_linear', 'mlp.hook_post', 'hook_resid_post']:
+    #         hooks.append((
+    #             f'blocks.{layer}.{sublayer}',
+    #             partial(store_activation_hook, cache_dict=cache_ablated)
+    #         ))
+    # cache_ablated, fwd_hooks, _bwd_hooks = model.get_caching_hooks()
+    # hooks.extend(fwd_hooks)
+    with model.hooks(hooks):
+        logits_ablated, cache_ablated = model.run_with_cache(input_ids)
     return logits_ablated, cache_ablated
 
 def inspect_logit_diff(model:HookedTransformer, logits_clean:torch.Tensor, logits_ablated:torch.Tensor, pos):
 
     logit_diff = logits_clean - logits_ablated
 
-    relevant_logit_diff = logit_diff[0,pos,:]
+    relevant_logit_diff = logit_diff[:,pos,:]
 
     top = torch.topk(relevant_logit_diff, k=16)
     bottom = torch.topk(relevant_logit_diff, k=16, largest=False)
 
     results = []
     results.append("top tokens promoted by the neurons (overall effect):")
-    results.extend(model.to_str_tokens(top.indices))#TODO
+    results.append(dumps([model.to_single_str_token(t.item()) for t in top.indices[0]]))
+    #TODO also show the actual logit diff values (also below)
 
     results.append("top tokens suppressed by the neurons (overall effect):")
-    results.extend(model.to_str_tokens(bottom.indices))#TODO
+    results.append(dumps([model.to_single_str_token(t.item()) for t in bottom.indices[0]]))
     return "\n".join(results)
 
 def analyze_hidden_states(model:HookedTransformer, cache:ActivationCache|dict[str,torch.Tensor]):
@@ -144,16 +147,16 @@ def show_single_text(
 ):
     results = []
     results.append("Input tokens:")
-    results.append(str(model.to_str_tokens(input_ids[:pos+1])))#TODO
+    results.append(dumps([model.to_single_str_token(t.item()) for t in input_ids[0]]))
     results.append("Ground-truth output token:")
-    results.append(model.to_single_str_token(input_ids[pos+1].item()))
+    results.append(model.to_single_str_token(input_ids[:,pos+1].item()))
     if max_new_tokens>1:
         results.append("Ground-truth continuation:")
-        results.append(model.to_str(input_ids[pos+1:pos+1+max_new_tokens]))
+        results.append(model.to_str(input_ids[:,pos+1:pos+1+max_new_tokens]))
 
     # ## Running the model on the example
     print("running clean model...")
-    logits_clean, cache_clean = model.run_with_cache(input_ids[:pos+1])
+    logits_clean, cache_clean = model.run_with_cache(input_ids[:,:pos+1])
     results.append("\nThe clean model outputs:")
     argmax_token_clean = torch.argmax(logits_clean[0,pos]).item()
     results.append(model.to_single_str_token(argmax_token_clean))
@@ -161,11 +164,11 @@ def show_single_text(
     if max_new_tokens>1:
         print("generating...")
         results.append("The clean model generates (greedily):")
-        results.append(model.generate(input_ids[:pos+1], max_new_tokens=max_new_tokens, do_sample=False))
+        results.append(model.generate(input_ids[:,:pos+1], max_new_tokens=max_new_tokens, do_sample=False))
 
     #same with ablated model
     print("running ablated model...")
-    logits_ablated, cache_ablated = run_ablated_and_cache(args, model, input_ids[:pos+1], neuron_list)
+    logits_ablated, cache_ablated = run_ablated_and_cache(args, model, input_ids[:,:pos+1], neuron_list)
     results.append("\nThe ablated model outputs:")
     argmax_token_ablated = torch.argmax(logits_ablated[0,pos]).item()
     results.append(model.to_single_str_token(argmax_token_ablated))
@@ -177,7 +180,7 @@ def show_single_text(
             args=args,
             model=model,
             neuron_subset=neuron_list,
-            prompt=input_ids[:pos+1],
+            prompt=input_ids[:,:pos+1],
             do_sample=False,
             mean_values=None,#TODO
         ))
