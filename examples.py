@@ -156,7 +156,19 @@ def show_single_text(
 
     # ## Running the model on the example
     print("running clean model...")
-    logits_clean, cache_clean = model.run_with_cache(input_ids[:,:pos+1])
+    # print("Hooks before reset:", [(name, len(hp.fwd_hooks), len(hp.bwd_hooks)) for name, hp in model.hook_dict.items() if hp.fwd_hooks or hp.bwd_hooks])
+    # model.hook_dict.clear()  # Manually clear all hooks
+    # model.reset_hooks(including_permanent=True)  # Ensure no residual hooks from previous runs -- usually shouldn't happen but just in case
+    # #print("Hooks after reset:", [(name, len(hp.fwd_hooks), len(hp.bwd_hooks)) for name, hp in model.hook_dict.items() if hp.fwd_hooks or hp.bwd_hooks])
+    logits_clean, cache_clean_initial = model.run_with_cache(
+        input_ids[:,:pos+1],
+        #return_cache_object=False,
+    )
+    print(cache_clean_initial.keys())
+    cache_clean = {k: v.clone() for k,v in cache_clean_initial.items()} # reduce risk of unwittingly modifying it
+    print(cache_clean.keys())
+    print(cache_clean[f'blocks.31.hook_mlp_out'][0:1,-1:])
+    del cache_clean_initial
     results.append("\nThe clean model outputs:")
     argmax_token_clean = torch.argmax(logits_clean[0,pos]).item()
     results.append(model.to_single_str_token(argmax_token_clean))
@@ -169,6 +181,7 @@ def show_single_text(
     #same with ablated model
     print("running ablated model...")
     logits_ablated, cache_ablated = run_ablated_and_cache(args, model, input_ids[:,:pos+1], neuron_list)
+    print(cache_clean[f'blocks.31.hook_mlp_out'][0:1,-1:])
     results.append("\nThe ablated model outputs:")
     argmax_token_ablated = torch.argmax(logits_ablated[0,pos]).item()
     results.append(model.to_single_str_token(argmax_token_ablated))
