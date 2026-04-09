@@ -152,7 +152,7 @@ def show_single_text(
     results.append(model.to_single_str_token(input_ids[:,pos+1].item()))
     if max_new_tokens>1:
         results.append("Ground-truth continuation:")
-        results.append(model.to_str(input_ids[:,pos+1:pos+1+max_new_tokens]))
+        results.append(model.to_string(input_ids[0,pos+1:pos+1+max_new_tokens]))
 
     # ## Running the model on the example
     print("running clean model...")
@@ -164,10 +164,10 @@ def show_single_text(
         input_ids[:,:pos+1],
         #return_cache_object=False,
     )
-    print(cache_clean_initial.keys())
+    #print(cache_clean_initial.keys())
     cache_clean = {k: v.clone() for k,v in cache_clean_initial.items()} # reduce risk of unwittingly modifying it
-    print(cache_clean.keys())
-    print(cache_clean[f'blocks.31.hook_mlp_out'][0:1,-1:])
+    # print(cache_clean.keys())
+    # print(cache_clean[f'blocks.31.hook_mlp_out'][0:1,-1:])
     del cache_clean_initial
     results.append("\nThe clean model outputs:")
     argmax_token_clean = torch.argmax(logits_clean[0,pos]).item()
@@ -176,12 +176,14 @@ def show_single_text(
     if max_new_tokens>1:
         print("generating...")
         results.append("The clean model generates (greedily):")
-        results.append(model.generate(input_ids[:,:pos+1], max_new_tokens=max_new_tokens, do_sample=False))
+        results.append(
+            model.generate(input_ids[:,:pos+1], max_new_tokens=max_new_tokens, do_sample=False, return_type="str")
+        )
 
     #same with ablated model
     print("running ablated model...")
     logits_ablated, cache_ablated = run_ablated_and_cache(args, model, input_ids[:,:pos+1], neuron_list)
-    print(cache_clean[f'blocks.31.hook_mlp_out'][0:1,-1:])
+    #print(cache_clean[f'blocks.31.hook_mlp_out'][0:1,-1:])
     results.append("\nThe ablated model outputs:")
     argmax_token_ablated = torch.argmax(logits_ablated[0,pos]).item()
     results.append(model.to_single_str_token(argmax_token_ablated))
