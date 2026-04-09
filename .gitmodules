@@ -4,3 +4,6 @@
 [submodule "neuroscope"]
 	path = neuroscope
 	url = https://github.com/sjgerstner/neuroscope
+[submodule "EAP-IG"]
+	path = EAP-IG
+	url = https://github.com/hannamw/EAP-IG
