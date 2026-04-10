@@ -3,9 +3,9 @@ set -euox pipefail
 
 n_neuron_variants=("24" "243" "None")
 
-for i in "${!n_neuron_variants[@]}"; do
-    n_neurons=${n_neuron_variants[i]}
-    for intervention_type in {zero_ablation,mean_ablation}; do
+for intervention_type in {zero_ablation,mean_ablation}; do
+    for i in "${!n_neuron_variants[@]}"; do
+        n_neurons=${n_neuron_variants[i]}
         python -m entropy.entropy_intervention_wrap \
             --neuron_subset_name "orthogonal output" \
             --n_neurons $n_neurons \
