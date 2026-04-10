@@ -1,78 +1,60 @@
-from tqdm import tqdm
-from typing import Callable, Literal
-
 import torch
-from torch import Tensor
-from torch.utils.data import DataLoader
 
 from transformer_lens import HookedTransformer
 
+from eap import attribute
+from eap.evaluate import evaluate_graph
 from eap.graph import Graph
-from eap.utils import make_hooks_and_matrices, tokenize_plus
 
 #TODO:
-# - get rid of graph or make one (it's just for number of forward and backward nodes)
-# - possibly get rid of dataloader, as I'm interested in a single example. Alternative: dataloader with single datapoint.
-# - modify gradient_hook (in eap) and shape of scores tensor
-# - new intervention keyword for "self-defined corrupted activations"
+# Modify Graph to allow for finding position-sensitive circuits.
+# Don't change the structure of the graph, just
+# the shape of graph.scores
+# and the methods.
 
-def get_scores_eap_var(
-    model: HookedTransformer, graph: Graph, dataloader:DataLoader, metric: Callable[[Tensor], Tensor], 
-                   intervention: Literal['patching', 'zero', 'mean','mean-positional']='patching', 
-                   #intervention_dataloader: Optional[DataLoader]=None,
-                   quiet=False
-):
-    """Gets edge attribution scores using EAP. Variant of the function in EAP-IG.
+# TODO dataloader with single datapoint.
+dataloader = ...
 
-    Args:
-        model (HookedTransformer): The model to attribute
-        graph (Graph): Graph to attribute
-        dataloader (DataLoader): The data over which to attribute
-        metric (Callable[[Tensor], Tensor]): metric to attribute with respect to
-        quiet (bool, optional): suppress tqdm output. Defaults to False.
+#TODO metric
+def my_metric(x:torch.Tensor)->torch.Tensor:
+    return x.sum()
 
-    Returns:
-        Tensor: a [src_nodes, dst_nodes] tensor of scores for each edge
-    """
-    scores = torch.zeros((graph.n_forward, graph.n_backward), device='cuda', dtype=model.cfg.dtype)    
+#model and graph
+model = HookedTransformer.from_pretrained(
+    'allenai/OLMo-7B-0424-hf',
+    refactor_glu=True,#TODO do we need this here?
+)
+graph = Graph.from_model(model)
+is_fancy_graph=False#TODO change once ready
 
-    # if 'mean' in intervention:
-    #     assert intervention_dataloader is not None, "Intervention dataloader must be provided for mean interventions"
-    #     per_position = 'positional' in intervention
-    #     means = compute_mean_activations(model, graph, intervention_dataloader, per_position=per_position)
-    #     means = means.unsqueeze(0)
-    #     if not per_position:
-    #         means = means.unsqueeze(0)
+if is_fancy_graph:
+#attribute
+#running this modifies graph.scores:
+    attribute.attribute(
+        model,
+        graph,
+        dataloader,
+        metric=my_metric,
+        method='EAP',
+        # intervention='custom',
+        # keep_pos_dim=True,
+    )
 
+    #circuit finding
+    graph.apply_topn(n)#TODO define n, and/or apply another method
 
-    total_items = 0
-    dataloader = dataloader if quiet else tqdm(dataloader)
-    for clean, corrupted, label in dataloader:
-        batch_size = len(clean)
-        total_items += batch_size
-        clean_tokens, attention_mask, input_lengths, n_pos = tokenize_plus(model, clean)
-        corrupted_tokens, _, _, _ = tokenize_plus(model, corrupted)
+    #TODO evaluation: wich method do we want?
+    results = evaluate_graph(model, graph, dataloader, metrics=my_metric)
 
-        (fwd_hooks_corrupted, fwd_hooks_clean, bwd_hooks), activation_difference = make_hooks_and_matrices(model, graph, batch_size, n_pos, scores)
-
-        with torch.inference_mode():
-            if intervention == 'patching':
-                # We intervene by subtracting out clean and adding in corrupted activations
-                with model.hooks(fwd_hooks_corrupted):
-                    _ = model(corrupted_tokens, attention_mask=attention_mask)
-            # elif 'mean' in intervention:
-            #     # In the case of zero or mean ablation, we skip the adding in corrupted activations
-            #     # but in mean ablations, we need to add the mean in
-            #     activation_difference += means
-
-            # For some metrics (e.g. accuracy or KL), we need the clean logits
-            clean_logits = model(clean_tokens, attention_mask=attention_mask)
-
-        with model.hooks(fwd_hooks=fwd_hooks_clean, bwd_hooks=bwd_hooks):
-            logits = model(clean_tokens, attention_mask=attention_mask)
-            metric_value = metric(logits, clean_logits, input_lengths, label)
-            metric_value.backward()
-
-    scores /= total_items
-
-    return scores
+else:#minimalist alternative:
+    scores = attribute.get_scores_eap(
+        model,
+        graph,
+        metric=my_metric,
+        dataloader=dataloader,
+        intervention='custom',
+        keep_pos_dims=True,
+    )
+    #TODO circuit finding, e.g. topn. Make sure we keep only real edges!
+    #TODO evaluation: how similar are the results if we just ablate the relevant edges?
+    # and if we just ablate the relevant weakening neurons?
