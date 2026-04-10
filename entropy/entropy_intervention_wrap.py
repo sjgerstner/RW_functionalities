@@ -98,10 +98,10 @@ if __name__ == '__main__':
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # general arguments
     parser.add_argument('--work_dir', default='.')
-    parser.add_argument('--data_dir', default='.')
     parser.add_argument('--wcos_dir', default='.')
+    parser.add_argument('--data_dir', default='../RW_functionalities_results')
     parser.add_argument(
-        '--output_dir', default='../RW_functionalities_results/intervention_results')
+        '--output_dir', default='intervention_results')
     parser.add_argument('--means_path', default='neuroscope/results/OLMo-7B-0424/summary_refactored.pt')
     parser.add_argument(
         '--model',
@@ -170,7 +170,7 @@ if __name__ == '__main__':
     torch.set_grad_enabled(False)
 
     tokenized_dataset = datasets.load_from_disk(
-        f'{args.data_dir}/{args.token_dataset}'
+        args.token_dataset
     )
     tokenized_dataset = tokenized_dataset.select_columns('input_ids')
     if args.neuron_subset_name=='baseline':

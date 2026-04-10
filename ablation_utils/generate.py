@@ -41,6 +41,7 @@ def _get_args():
     parser = ArgumentParser()
     # parser.add_argument('--work_dir', default='.')
     # parser.add_argument('--wcos_dir', default='.')
+    parser.add_argument('--data_dir', default='../RW_functionalities_results')
     parser.add_argument('--means_path', default='neuroscope/results/7B_new/summary_refactored.pt')
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument(
