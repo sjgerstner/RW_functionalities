@@ -11,6 +11,8 @@ import torch
 
 from weight_analysis_utils import plotting
 
+#TODO put plotting stuff into separate file to avoid uselessly importing plotting
+
 #%%
 def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation')->torch.Tensor:
     #print('loading data...')

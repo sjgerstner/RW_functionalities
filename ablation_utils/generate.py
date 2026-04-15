@@ -8,7 +8,8 @@ from weight_analysis_utils.utils import NAME_TO_COMBO
 from neuron_choice import neuron_choice, get_n_neurons
 from .utils import get_mean_values, make_neuron_hooks
 
-torch.set_grad_enabled(False)
+# torch.set_grad_enabled(False)
+#TODO use an inference wrapper WITHIN the functions
 
 def generate_ablated(
     args,

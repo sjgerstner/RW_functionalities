@@ -13,7 +13,8 @@ import seaborn as sns
 
 from .utils import COMBO_TO_NAME, VANILLA_CATEGORIES, make_combo_name_dict, floats_to_strings
 
-torch.set_grad_enabled(False)
+# torch.set_grad_enabled(False)
+#TODO if necessary, use inference mode WITHIN the functions
 
 DEVICE='cuda:0'
 

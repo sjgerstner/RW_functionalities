@@ -99,7 +99,7 @@ else:#minimalist alternative without fancy graph
         keep_pos_dims=True,
         corruption_hooks=corruption_hooks,
     )
-    print(torch.topk(scores, k=16))
+    #print(torch.topk(scores, k=16))
     #TODO circuit finding, e.g. topn. Make sure we keep only real edges!
     #TODO evaluation: how similar are the results if we just ablate the relevant edges?
     # and if we just ablate the relevant weakening neurons?
