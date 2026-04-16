@@ -41,6 +41,7 @@ def loss(logits:torch.Tensor, clean_logits:torch.Tensor, input_lengths:torch.Ten
 
 parser = ArgumentParser()
 parser.add_argument("--device", default="cuda:0")
+parser.add_argument("--n_edges", default=32, type=int)
 args = parser.parse_args()
 
 if exists(GRAPH_FILE):
@@ -98,15 +99,15 @@ else:
         # keep_pos_dim=True,
     )
 
-    graph.to_json("full_graph.json")
+    graph.to_json(GRAPH_FILE)
 
 #circuit finding
-#TODO define n, and/or apply another method
-graph.apply_topn(
-    n=64,
-    #prune=False,
+#TODO define n_edges
+graph.apply_greedy(
+    n_edges=args.n_edges,
     absolute=False,
-    prune_parentless=False,
+    prune=False,
+    #prune_parentless=False,
 )
 
 #image
