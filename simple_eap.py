@@ -8,7 +8,7 @@ import datasets
 from transformer_lens import HookedTransformer
 
 from eap import attribute
-from eap.evaluate import evaluate_graph
+from eap.evaluate import evaluate_graph#may be needed in the future
 from eap.graph import Graph
 from eap.utils import get_logit_positions#, tokenize_plus
 
@@ -21,13 +21,17 @@ from examples import create_args, find_neurons, list_ablation_hooks
 # and the methods.
 
 #model and graph
-model = HookedTransformer.from_pretrained_no_processing(#TODO do we need preprocessing here?
+model = HookedTransformer.from_pretrained_no_processing(#we don't need processing because EAP is implementation invariant
     'allenai/OLMo-7B-0424-hf',
     #refactor_glu=True,
-    device='cpu',#TODO comment out and run on beta
+    device='cpu',
 )
+model.cfg.use_attn_result = True
+model.cfg.use_split_qkv_input = True
+model.cfg.use_hook_mlp_in = True
+
 graph = Graph.from_model(model)
-is_fancy_graph=False#TODO change once ready
+is_fancy_graph=True#TODO change once ready
 
 def collate_fn(batch):
     sequences = [item["sequences"] for item in batch]
@@ -78,17 +82,19 @@ if is_fancy_graph:
         dataloader,
         metric=my_metric,
         method='EAP',
-        # corruption_hooks=corruption_hooks,
-        # intervention='custom',
+        corruption_hooks=corruption_hooks,
         # keep_pos_dim=True,
     )
 
     #circuit finding
-    n=16
-    graph.apply_topn(n)#TODO define n, and/or apply another method
+    graph.apply_topn(n=64, prune=False, absolute=False)#TODO define n, and/or apply another method
 
-    #TODO evaluation: wich method do we want?
-    results = evaluate_graph(model, graph, dataloader, metrics=my_metric)
+    #image
+    graph.to_image("../RW_functionalities_results/graph.png")
+
+    #TODO evaluation: how similar are the results if we just ablate the relevant edges?
+    # and if we just ablate the relevant weakening neurons?
+    #results = evaluate_graph(model, graph, dataloader, metrics=my_metric)
 
 else:#minimalist alternative without fancy graph
     scores = attribute.get_scores_eap(
