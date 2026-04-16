@@ -17,6 +17,9 @@ from eap.utils import get_logit_positions#, tokenize_plus
 
 from examples import create_args, find_neurons, list_ablation_hooks
 
+#TODO everywhere this appears:
+# - pt instead of json
+# - more fine-grained naming (positional vs not, ...)
 GRAPH_FILE = "../RW_functionalities_results/full_graph.json"
 
 def collate_fn(batch):
@@ -72,9 +75,9 @@ else:
         "labels": ["mic"]})
     dataloader = DataLoader(dataset=dataset, collate_fn=collate_fn)
 
-    my_metric=mic_score #TODO also try with entropy and loss
+    my_metric=mic_score #TODO also try with entropy and loss (and put minus in front)
 
-    args = create_args(#note that this function is hard-coding the model name
+    args = create_args(#NOTE that this function is hard-coding the model name
         neuron_subset_name="weakening",
         intervention_type="zero_ablation",
         metric="entropy",
@@ -102,7 +105,6 @@ else:
     graph.to_json(GRAPH_FILE)
 
 #circuit finding
-#TODO define n_edges
 graph.apply_greedy(
     n_edges=args.n_edges,
     absolute=False,
