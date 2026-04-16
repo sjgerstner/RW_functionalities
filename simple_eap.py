@@ -1,3 +1,5 @@
+from os.path import exists
+
 import torch
 from torch.utils.data import (
     #Dataset,
@@ -14,35 +16,12 @@ from eap.utils import get_logit_positions#, tokenize_plus
 
 from examples import create_args, find_neurons, list_ablation_hooks
 
-#TODO:
-# Modify Graph to allow for finding position-sensitive circuits.
-# Don't change the structure of the graph, just
-# the shape of graph.scores
-# and the methods.
-
-#model and graph
-model = HookedTransformer.from_pretrained_no_processing(#we don't need processing because EAP is implementation invariant
-    'allenai/OLMo-7B-0424-hf',
-    #refactor_glu=True,
-    device='cpu',
-)
-model.cfg.use_attn_result = True
-model.cfg.use_split_qkv_input = True
-model.cfg.use_hook_mlp_in = True
-
-graph = Graph.from_model(model)
-is_fancy_graph=True#TODO change once ready
+GRAPH_FILE = "../RW_functionalities_results/full_graph.json"
 
 def collate_fn(batch):
     sequences = [item["sequences"] for item in batch]
     labels = [item["labels"] for item in batch]
     return (sequences, sequences, labels)
-
-sequence = "Yesterday (21 December) the Government announced a package of support for hospitality and leisure businesses that are losing trade because of the O"
-dataset = datasets.Dataset.from_dict(mapping = {
-    "sequences": [sequence],
-    "labels": ["mic"]})
-dataloader = DataLoader(dataset=dataset, collate_fn=collate_fn)
 
 #metrics
 def mic_score(logits:torch.Tensor, clean_logits:torch.Tensor, input_lengths:torch.Tensor, label:torch.Tensor|None=None)->torch.Tensor:
@@ -59,23 +38,51 @@ def loss(logits:torch.Tensor, clean_logits:torch.Tensor, input_lengths:torch.Ten
     probs = torch.softmax(logits, dim=-1)
     return -torch.log(probs[...,label])
 
-my_metric=mic_score #TODO also try with entropy and loss
+if exists(GRAPH_FILE):
+    graph = Graph.from_json(GRAPH_FILE)
+else:
+    #TODO:
+    # Modify Graph to allow for finding position-sensitive circuits.
+    # Don't change the structure of the graph, just
+    # the shape of graph.scores
+    # and the methods.
 
-args = create_args(#note that this function is hard-coding the model name
-    neuron_subset_name="weakening",
-    intervention_type="zero_ablation",
-    metric="entropy",
-    topk=1,
-    device=model.cfg.device,
-    gate='-',
-    post='+',
-)
-neuron_list = find_neurons(args)
-corruption_hooks = list_ablation_hooks(args, neuron_list)
+    #model and graph
+    model = HookedTransformer.from_pretrained_no_processing(#we don't need processing because EAP is implementation invariant
+        'allenai/OLMo-7B-0424-hf',
+        #refactor_glu=True,
+        device='cpu',
+    )
+    model.cfg.use_attn_result = True
+    model.cfg.use_split_qkv_input = True
+    model.cfg.use_hook_mlp_in = True
 
-if is_fancy_graph:
-#attribute
-#running this modifies graph.scores:
+    graph = Graph.from_model(model)
+    # is_fancy_graph=True
+
+    sequence = "Yesterday (21 December) the Government announced a package of support for hospitality and leisure businesses that are losing trade because of the O"
+    dataset = datasets.Dataset.from_dict(mapping = {
+        "sequences": [sequence],
+        "labels": ["mic"]})
+    dataloader = DataLoader(dataset=dataset, collate_fn=collate_fn)
+
+    my_metric=mic_score #TODO also try with entropy and loss
+
+    args = create_args(#note that this function is hard-coding the model name
+        neuron_subset_name="weakening",
+        intervention_type="zero_ablation",
+        metric="entropy",
+        topk=1,
+        device=model.cfg.device,
+        gate='-',
+        post='+',
+    )
+    neuron_list = find_neurons(args)
+    corruption_hooks = list_ablation_hooks(args, neuron_list)
+
+    #if is_fancy_graph:
+    #attribute
+    #running this modifies graph.scores:
     attribute.attribute(
         model,
         graph,
@@ -86,26 +93,31 @@ if is_fancy_graph:
         # keep_pos_dim=True,
     )
 
-    #circuit finding
-    graph.apply_topn(n=64, prune=False, absolute=False)#TODO define n, and/or apply another method
+    graph.to_json("full_graph.json")
 
-    #image
-    graph.to_image("../RW_functionalities_results/graph.png")
+#circuit finding
+#TODO define n, and/or apply another method
+graph.apply_topn(
+    n=64,
+    #prune=False,
+    absolute=False,
+    prune_parentless=False,
+)
 
-    #TODO evaluation: how similar are the results if we just ablate the relevant edges?
-    # and if we just ablate the relevant weakening neurons?
-    #results = evaluate_graph(model, graph, dataloader, metrics=my_metric)
+#image
+graph.to_image("../RW_functionalities_results/graph.png")
 
-else:#minimalist alternative without fancy graph
-    scores = attribute.get_scores_eap(
-        model,
-        graph,
-        metric=my_metric,
-        dataloader=dataloader,
-        keep_pos_dims=True,
-        corruption_hooks=corruption_hooks,
-    )
-    #print(torch.topk(scores, k=16))
-    #TODO circuit finding, e.g. topn. Make sure we keep only real edges!
-    #TODO evaluation: how similar are the results if we just ablate the relevant edges?
-    # and if we just ablate the relevant weakening neurons?
+#TODO evaluation: how similar are the results if we just ablate the relevant edges?
+# and if we just ablate the relevant weakening neurons?
+#results = evaluate_graph(model, graph, dataloader, metrics=my_metric)
+
+# else:#minimalist alternative without fancy graph
+#     scores = attribute.get_scores_eap(
+#         model,
+#         graph,
+#         metric=my_metric,
+#         dataloader=dataloader,
+#         keep_pos_dims=True,
+#         corruption_hooks=corruption_hooks,
+#     )
+#     #print(torch.topk(scores, k=16))
