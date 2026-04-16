@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from os.path import exists
 
 import torch
@@ -38,6 +39,10 @@ def loss(logits:torch.Tensor, clean_logits:torch.Tensor, input_lengths:torch.Ten
     probs = torch.softmax(logits, dim=-1)
     return -torch.log(probs[...,label])
 
+parser = ArgumentParser()
+parser.add_argument("--device", default="cuda:0")
+args = parser.parse_args()
+
 if exists(GRAPH_FILE):
     graph = Graph.from_json(GRAPH_FILE)
 else:
@@ -51,7 +56,7 @@ else:
     model = HookedTransformer.from_pretrained_no_processing(#we don't need processing because EAP is implementation invariant
         'allenai/OLMo-7B-0424-hf',
         #refactor_glu=True,
-        device='cpu',
+        device=args.device,
     )
     model.cfg.use_attn_result = True
     model.cfg.use_split_qkv_input = True
