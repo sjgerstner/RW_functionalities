@@ -88,7 +88,7 @@ def record_logitlens(args, knowns_df, model, neuron_subset=None, neuron_subset_n
         position -=1
         cache = torch.zeros(
             (position+1, model.cfg.n_layers, model.cfg.d_model),#pos layer d_model
-            device='cuda'
+            device=args.device
         )
         with torch.no_grad():
             model.run_with_hooks(

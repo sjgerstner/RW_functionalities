@@ -48,6 +48,8 @@ def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:
     Returns:
         _type_: _description_
     """
+    #TODO variant for big set of neurons from same layer (efficiency!).
+    #Then, adapt the scripts that call this function
     if conditioning_value is None:
         conditioning_value = {}
     out = []

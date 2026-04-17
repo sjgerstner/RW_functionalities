@@ -109,7 +109,7 @@ if __name__=="__main__":
         mean_values = None
 
     # %%
-    model = HookedTransformer.from_pretrained(args.model)
+    model = HookedTransformer.from_pretrained(args.model, device=args.device)
     short_model_name = args.model.split('/')[-1]
     knowns_df = pd.read_json(f'{args.data_dir}/knowns/known_{short_model_name}.json')
 

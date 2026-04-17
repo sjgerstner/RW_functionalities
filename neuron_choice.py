@@ -114,7 +114,7 @@ def get_n_neurons(args):
         constant_freq = freq_data.loc[args.constant_class]["true"]
         constant = constant_freq * n_neurons
         return n_neurons, constant
-    if args.n_neurons:
+    if args.n_neurons is not None and args.n_neurons!='None':
         return float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons), None
     return None, None
 
