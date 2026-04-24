@@ -1,23 +1,16 @@
 """Main code for the RW functionalities paper"""
 
 import argparse
-import gc
 import os
 import pickle
 
-import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
-import einops
-from transformer_lens import HookedTransformer, HookedEncoderDecoder
-from transformer_lens.loading_from_pretrained import OLMO_CHECKPOINTS_1B, OLMO_CHECKPOINTS_7B
 
-from src.weight_analysis_utils import utils, plotting
+from src.weight_analysis_utils import utils, plotting, model_loading
 
 torch.set_grad_enabled(False)
-
-DEVICE='cuda:0'
 
 EXPERIMENT_LIST = [
     "beta",
@@ -51,60 +44,6 @@ MODEL_LIST = [
     "yi-6b",
 ]
 
-MODEL_TO_CHECKPOINTS = {
-    'allenai/OLMo-1B-hf': OLMO_CHECKPOINTS_1B,
-    'allenai/OLMo-7B-0424-hf': OLMO_CHECKPOINTS_7B,
-}
-
-def _load_model(model_name, **kwargs):
-    if model_name.startswith("bert"):
-        model = HookedTransformer.from_pretrained_no_processing(#TODO change to HookedEncoder?
-            model_name, **kwargs,
-        )
-    elif model_name.startswith("t5"):
-        model = HookedEncoderDecoder.from_pretrained(
-            model_name, **kwargs,
-        )
-    else:
-        model = HookedTransformer.from_pretrained(
-            model_name,
-            **kwargs,
-        )
-    return model
-
-def _load_model_data(model_name, cache_dir=None, checkpoint_value=None, refactor_glu=True):
-    model_kwargs = {
-        "checkpoint_value":checkpoint_value,
-        "cache_dir":cache_dir,
-        "device":"cpu",
-    }
-    if not model_name.startswith("t5"):
-        model_kwargs["refactor_glu"]=refactor_glu
-    try:
-        model = _load_model(model_name, local_files_only=True, **model_kwargs)
-    except Exception as e:
-        print(
-            f"Need to fetch remote files for model {model_name}. Ignored the following error: {e}"
-        )
-        model = _load_model(model_name, local_files_only=False, **model_kwargs)
-
-    out_dict = {}
-    #new shape: layer neuron model_dim
-    if hasattr(model, "W_gate") and model.W_gate is not None:
-        out_dict["W_gate"] = einops.rearrange(model.W_gate.detach(), 'l d n -> l n d').to(DEVICE)
-    out_dict["W_in"] = einops.rearrange(model.W_in.detach(), 'l d n -> l n d').to(DEVICE)
-    out_dict["W_out"] = model.W_out.detach().to(DEVICE) #already has the shape we want
-    #sanity check,comment out
-    #print(W_gate.shape, W_in.shape, W_out.shape)#should all be the same
-
-    out_dict["d_model"] = model.cfg.d_model
-
-    del model
-    gc.collect()
-    torch.cuda.empty_cache()
-
-    return out_dict
-
 def cosines(mlp_weights):
     """Compute weight cosines within each neuron of the given model
     and return result as a dict of three tensors (gatelin, linout, gateout),
@@ -134,31 +73,12 @@ def _load_data_if_exists(path):
         data={}
     return data
 
-# def _get_cosine_data(path, model_data):
-#     """load and/or compute cosine data"""
-#     data_file = f"{path}/data.pt"
-#     if os.path.exists(data_file):
-#         #print(torch.serialization.get_unsafe_globals_in_checkpoint(data_file))
-#         data = torch.load(
-#             data_file, map_location='cpu',
-#             #weights_only=False,
-#         )
-#     elif os.path.exists(f"{path}/data.pickle"):
-#         #try:
-#         with open(f"{path}/data.pickle", 'rb') as f:
-#             data = pickle.load(f)
-#         # except RuntimeError as e:
-#         #     print(f"Ignoring error when loading pickle, recomputing data: {e}")
-#     else:
-#         print("computing cosines")
-#         data = cosines(model_data)
-#     return data
-
 def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=None):
-    model_data = _load_model_data(
+    model_data = model_loading.load_model_data(
         model_name,
         cache_dir=cache_dir, checkpoint_value=checkpoint_value,
         refactor_glu=args.refactor_glu,
+        device=args.device,
     )
     if "linout" not in data:
         print("computing cosines")
@@ -225,6 +145,7 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--work_dir', default='../RW_functionalities_results')
+    parser.add_argument('--device', default='cuda:0')
     parser.add_argument(
         '--refactor_glu',
         action='store_true',
@@ -262,6 +183,7 @@ if __name__=="__main__":
         help="selected layers for main paper plot"
     )
     args = parser.parse_args()
+
     if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:
         model_to_medians_dict = {}
     for model_name in args.model:
@@ -276,7 +198,7 @@ if __name__=="__main__":
             for checkpoint_index in args.checkpoints:
                 data = analysis(
                     args, model_name,
-                    checkpoint_value=MODEL_TO_CHECKPOINTS[model_name][checkpoint_index],
+                    checkpoint_value=model_loading.MODEL_TO_CHECKPOINTS[model_name][checkpoint_index],
                     cache_dir='/nfs/datz/olmo_models',
                 )
                 del data
