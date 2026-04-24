@@ -89,6 +89,8 @@ def make_color_dict(category_keys:list[str])->dict[str, tuple[float,float,float,
 def _short_to_long(key:str)->str:
     if key in SHORT_TO_LONG:
         return SHORT_TO_LONG[key]
+    elif key.endswith('_start_to_end'):
+        return key.replace('_start_to_end', ' change')
     keys = key.split('_')
     combo, metric_type = '_'.join(keys[:-1]), keys[-1]
     return f"{SHORT_TO_LONG[metric_type]} {SHORT_TO_LONG[combo]}"
