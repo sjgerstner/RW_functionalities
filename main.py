@@ -2,13 +2,12 @@
 
 import argparse
 import os
-import pickle
 
 import matplotlib.pyplot as plt
 
 import torch
 
-from src.weight_analysis_utils import utils, plotting, model_loading
+from weight_analysis_utils import utils, plotting, loading
 
 torch.set_grad_enabled(False)
 
@@ -55,26 +54,8 @@ def cosines(mlp_weights):
         data["gateout"] = utils.cos(mlp_weights["W_gate"], mlp_weights["W_out"]).cpu()
     return data
 
-def _load_data_if_exists(path):
-    data_file = f"{path}/data.pt"
-    if os.path.exists(data_file):
-        #print(torch.serialization.get_unsafe_globals_in_checkpoint(data_file))
-        data = torch.load(
-            data_file, map_location='cpu',
-            #weights_only=False,
-        )
-    elif os.path.exists(f"{path}/data.pickle"):
-        #try:
-        with open(f"{path}/data.pickle", 'rb') as f:
-            data = pickle.load(f)
-        # except RuntimeError as e:
-        #     print(f"Ignoring error when loading pickle, recomputing data: {e}")
-    else:
-        data={}
-    return data
-
 def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=None):
-    model_data = model_loading.load_model_data(
+    model_data = loading.load_model_data(
         model_name,
         cache_dir=cache_dir, checkpoint_value=checkpoint_value,
         refactor_glu=args.refactor_glu,
@@ -109,7 +90,7 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
         os.makedirs(path)
 
     #load and/or compute data and save it
-    data = _load_data_if_exists(
+    data = loading.load_data_if_exists(
         path
     )
     #cosines etc.
@@ -198,7 +179,7 @@ if __name__=="__main__":
             for checkpoint_index in args.checkpoints:
                 data = analysis(
                     args, model_name,
-                    checkpoint_value=model_loading.MODEL_TO_CHECKPOINTS[model_name][checkpoint_index],
+                    checkpoint_value=loading.MODEL_TO_CHECKPOINTS[model_name][checkpoint_index],
                     cache_dir='/nfs/datz/olmo_models',
                 )
                 del data
