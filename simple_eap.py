@@ -41,13 +41,15 @@ parser = ArgumentParser()
 parser.add_argument("--device", default="cuda:0")
 parser.add_argument("--n_edges", default=32, type=int)
 parser.add_argument("--positional", action='store_true')
+parser.add_argument("--subnodes", action='store_true')#TODO possibility to indicate name of neuron class
 parser.add_argument("--graph_method", choices=["topn", "threshold", "greedy"], default="greedy")
 parser.add_argument("--force_recompute", action='store_true')
 parser.add_argument("--test", action='store_true')
 args = parser.parse_args()
 
 POSITIONAL = args.positional or args.test
-GRAPH_FILE = f"../RW_functionalities_results/full{"_positional" if POSITIONAL else ""}_graph.pt"
+SUBNODES = args.subnodes or args.test
+GRAPH_FILE = f"../RW_functionalities_results/full{"_positional" if POSITIONAL else ""}_graph{"_with_subnodes" if SUBNODES else ""}.pt"
 
 if exists(GRAPH_FILE) and not args.force_recompute:
     print("loading previously computed graph")
@@ -63,9 +65,6 @@ else:
     model.cfg.use_attn_result = True
     model.cfg.use_split_qkv_input = True
     model.cfg.use_hook_mlp_in = True
-
-    graph = Graph.from_model(model)
-    # is_fancy_graph=True
 
     sequence = "Yesterday (21 December) the Government announced a package of support for hospitality and leisure businesses that are losing trade because of the O"
     dataset = datasets.Dataset.from_dict(mapping = {
@@ -87,6 +86,12 @@ else:
     neuron_list = find_neurons(my_args)
     corruption_hooks = list_ablation_hooks(my_args, neuron_list)
 
+    print("creating graph...")
+    graph = Graph.from_model(
+        model,
+        submlp_indices=neuron_list if args.subnodes else None,
+    )
+
     print("computing scores...")
     print("metric:", my_metric)
     print("lower is better:", my_metric is not mic_score)
@@ -106,10 +111,10 @@ else:
 
     graph.to_pt(GRAPH_FILE)
 
-if POSITIONAL:
-    print(graph.positional_scores[:,-1,-1])
-else:
-    print(graph.scores[-1,-1])
+# if POSITIONAL:
+#     print(graph.positional_scores[:,-1,-1])
+# else:
+#     print(graph.scores[-1,-1])
 
 print("circuit finding...")
 if args.test:
