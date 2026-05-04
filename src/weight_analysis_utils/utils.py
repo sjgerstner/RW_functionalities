@@ -129,9 +129,9 @@ def torch_quantile(  # noqa: PLR0913 (too many arguments)
 
 def cos(v1,v2, pattern='... d, ... d -> ...'):
     "batched cosine similarities"
-    v1 /= vector_norm(v1, dim=-1, keepdim=True)
-    v2 /= vector_norm(v2, dim=-1, keepdim=True)
-    dot = einops.einsum(v1, v2, pattern)
+    v1_normalised = v1 / vector_norm(v1, dim=-1, keepdim=True)
+    v2_normalised = v2 / vector_norm(v2, dim=-1, keepdim=True)
+    dot = einops.einsum(v1_normalised, v2_normalised, pattern)
     return dot
 
 def randomness_region(v1, v2, p=0.05, absolute=False):
@@ -297,7 +297,7 @@ def is_in_category(category_tensor, category_key):
 def floats_to_strings(float_list:list[float])->list[str]:
     return [f"{a:.2f}" for a in float_list]
 
-def make_combo_name_dict(keys:list[float|str], make_string_keys=False)->dict[float, str]:
+def make_combo_name_dict(keys:list[float|str], make_string_keys=False)->dict[float|str, str]:
     if isinstance(keys[0], float):
         string_keys = floats_to_strings(keys)
     else:

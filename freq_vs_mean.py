@@ -10,12 +10,13 @@ from freqs import load_wout_norms, process_activation_data
 SIGN_COMBOS = ["gate+_in+", "gate+_in-", "gate-_in+", "gate-_in-"]
 
 parser = ArgumentParser()
-parser.add_argument('--work_dir', default='.')
+#parser.add_argument('--work_dir', default='.')
+parser.add_argument('--data_dir', default='../RW_functionalities_results')
 parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424')
-parser.add_argument(
-    '--wcos_dir',
-    default='.',#'wcos_casestudies',
-)
+# parser.add_argument(
+#     '--wcos_dir',
+#     default='.',#'wcos_casestudies',
+# )
 parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
 parser.add_argument('--refactor_glu', action='store_true')
 parser.add_argument('--combos', nargs='+', default=SIGN_COMBOS+["summary"])
@@ -25,13 +26,13 @@ parser.add_argument('--subexperiments', nargs='+', default=["separate", "aggrega
 parser.add_argument('--layer_list', nargs='+', default=[0, 15, 31], type=int)
 args = parser.parse_args()
 
-PLOT_DIR = f'{args.work_dir}/plots/freq_vs_mean/{args.model}'
+PLOT_DIR = f'{args.data_dir}/plots/freq_vs_mean/{args.model}'
 os.makedirs(PLOT_DIR, exist_ok=True)
 
 NCOLS=4
 
 #tensor of frequency by neuron
-SUMMARY_PATH = f'{args.work_dir}/neuroscope/results/{args.neuroscope_dir}/summary{"_refactored" if args.refactor_glu else ""}.pt'
+SUMMARY_PATH = f'neuroscope/results/{args.neuroscope_dir}/summary{"_refactored" if args.refactor_glu else ""}.pt'
 summary_dict = torch.load(SUMMARY_PATH, map_location="cuda:0")
 n_layers = summary_dict[('gate+_in+', 'freq')].shape[0]
 d_mlp = summary_dict[('gate+_in+', 'freq')].shape[1]

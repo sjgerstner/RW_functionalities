@@ -33,7 +33,7 @@ parser = ArgumentParser()
 # parser.add_argument('--topk', default=50)
 parser.add_argument('--intervention_type', default='zero_ablation')
 # parser.add_argument('--activation_location', default='mlp.hook_pre')
-parser.add_argument('--work_dir', default='.')
+parser.add_argument('--work_dir', default='../RW_functionalities_results')
 args = parser.parse_args()
 
 OUT_DIR = f'{args.work_dir}/se'

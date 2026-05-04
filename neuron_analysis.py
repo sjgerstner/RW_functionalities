@@ -25,27 +25,27 @@ def topk_df(vec, model:HookedTransformer, emb=None, k=64, nonneg=True):
     df = pd.DataFrame(values, index=str_tokens, columns=["dot product"])
     return df
 
-def neuron_analysis(model:HookedTransformer, layer, neuron, emb=None, k=64, verbose=True):
+def neuron_analysis(model:HookedTransformer, layer, neuron, emb=None, k=10, verbose=True):
     """
     emb: if None (default), unembedding matrix of model.
     Otherwise set explicit matrix of shape d_model, d_vocab.
     """
-    out = model.W_out[layer,neuron,:].detach()
-    lin = model.W_in[layer,:,neuron].detach()
+    out = model.blocks[layer].mlp.W_out[neuron,:].detach()
+    lin = model.blocks[layer].mlp.W_in[:,neuron].detach()
     linout = cos(lin, out).item()
     out_pos = topk_df(out, model, emb=emb, k=k)
     out_neg = topk_df(-out, model, emb=emb, k=k)
     lin_pos = topk_df(lin, model, emb=emb, k=k)
     lin_neg = topk_df(-lin, model, emb=emb, k=k)
-    if hasattr(model, "W_gate") and model.W_gate is not None:
-        gate = model.W_gate[layer,:,neuron].detach()
+    if hasattr(model.blocks[layer].mlp, "W_gate"):
+        gate = model.blocks[layer].mlp.W_gate[:,neuron].detach()
         gatelin = cos(gate, lin).item()
         gateout = cos(gate, out).item()
         gate_pos = topk_df(gate, model, emb=emb, k=k)
         gate_neg = topk_df(-gate, model, emb=emb, k=k)
 
     if verbose:
-        if hasattr(model, "W_gate") and model.W_gate is not None:
+        if hasattr(model.blocks[layer].mlp, "W_gate"):
             print("gate vs. linear similarity:", gatelin)
             print("gate vs. out similarity:", gateout)
         print("lin vs. out similarity:", linout)
@@ -61,14 +61,14 @@ def neuron_analysis(model:HookedTransformer, layer, neuron, emb=None, k=64, verb
         print("================================")
         print("most similar tokens for -w_in:")
         print(lin_neg)
-        if hasattr(model, "W_gate") and model.W_gate is not None:
+        if hasattr(model.blocks[layer].mlp, "W_gate"):
             print("================================")
             print("most similar tokens for w_gate:")
             print(gate_pos)
             print("================================")
             print("most similar tokens for -w_gate:")
             print(gate_neg)
-
-    if hasattr(model, "W_gate") and model.W_gate is not None:
-        return gatelin, gateout, linout, out_pos, out_neg, lin_pos, lin_neg, gate_pos, gate_neg
-    return linout, out_pos, out_neg, lin_pos, lin_neg
+    else:
+        if hasattr(model.blocks[layer].mlp, "W_gate"):
+            return gatelin, gateout, linout, out_pos, out_neg, lin_pos, lin_neg, gate_pos, gate_neg
+        return linout, out_pos, out_neg, lin_pos, lin_neg

@@ -3,6 +3,8 @@
 from os.path import exists
 #import pickle
 import random
+
+import pandas as pd
 import torch
 
 from src.weight_analysis_utils.utils import COMBO_TO_NAME, is_in_category, VANILLA_CATEGORIES
@@ -37,7 +39,7 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
     """
     #category_index = CATEGORY_NAMES.index(category_name)
     random.seed(2512800)
-    path = f"{args.work_dir}/{args.wcos_dir}/results/{args.model}"
+    path = f"{args.data_dir}/results/{args.model}"
     # with open(f"{path}/data.pickle", 'rb') as f:
     #     data = pickle.load(f)
     data_path = f"{path}/data.pt"
@@ -108,11 +110,11 @@ def random_baseline(neuron_list, data_categories, category_key):
 def get_n_neurons(args):
     if args.by_freq:
         n_neurons = int(args.n_neurons)
-        freq_data = pd.read_pickle(f'plots/freq/{args.by_freq}_means.pickle')
+        freq_data = pd.read_pickle(f'{args.work_dir}/{args.wcos_dir}/plots/freq/{args.by_freq}_means.pickle')
         constant_freq = freq_data.loc[args.constant_class]["true"]
         constant = constant_freq * n_neurons
         return n_neurons, constant
-    if args.n_neurons:
+    if args.n_neurons is not None and args.n_neurons!='None':
         return float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons), None
     return None, None
 

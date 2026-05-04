@@ -5,7 +5,13 @@ import os
 
 import torch
 
-from src.weight_analyis_utils.plotting import aligned_histograms
+# import sys
+# print(sys.path)
+# sys.path.append('/mounts/work/sgerstner/RW_functionalities/src')
+
+from weight_analysis_utils import plotting
+
+#TODO put plotting stuff into separate file to avoid uselessly importing plotting
 
 #%%
 def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation')->torch.Tensor:
@@ -88,7 +94,7 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
     if args.log:
         kwargs["log"]=True
     metric = "log_scale" if metric=='scale' else metric
-    aligned_histograms(
+    plotting.aligned_histograms(
         list_data,
         subtitles=subtitles,
         savefile=f'{experiment_dir}/{metric}{"_log" if args.log else ""}.pdf',
@@ -101,8 +107,8 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
 #%%
 if __name__=='__main__':
     parser = ArgumentParser()
-    parser.add_argument('--data_dir', default='.')
-    parser.add_argument('--plot_dir', default='plots/ablations')
+    parser.add_argument('--data_dir', default='../RW_functionalities_results')
+    parser.add_argument('--plot_dir', default='../RW_functionalities_results/plots/ablations')
     parser.add_argument('--experiment_name', type=str)
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument('--dataset', default='dolma-small')

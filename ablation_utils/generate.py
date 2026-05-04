@@ -4,17 +4,18 @@ import os
 import torch
 from transformer_lens import HookedTransformer
 # Utilities
+from weight_analysis_utils.utils import NAME_TO_COMBO
 from neuron_choice import neuron_choice, get_n_neurons
-from src.weight_analyis_utils.utils import NAME_TO_COMBO
-from entropy.entropy_intervention_wrap import get_mean_values
-from attributes.utils import make_neuron_hooks
+from .utils import get_mean_values, make_neuron_hooks
 
-torch.set_grad_enabled(False)
+# torch.set_grad_enabled(False)
+#TODO use an inference wrapper WITHIN the functions
 
 def generate_ablated(
     args,
     model:HookedTransformer,
     neuron_subset:list,
+    prompt:str|torch.Tensor="<|endoftext|>",
     mean_values:torch.Tensor|None=None,
     **generate_kwargs,
     )->str:
@@ -24,7 +25,7 @@ def generate_ablated(
     for hook in hooks:
         model.add_hook(*hook)
     text = model.generate(
-        "<|endoftext|>",
+        prompt,
         return_type="str",
         **generate_kwargs
     )
@@ -39,8 +40,9 @@ def generate_and_save(save_path, file_name, **kwargs):
 
 def _get_args():
     parser = ArgumentParser()
-    parser.add_argument('--work_dir', default='.')
-    parser.add_argument('--wcos_dir', default='.')
+    # parser.add_argument('--work_dir', default='.')
+    # parser.add_argument('--wcos_dir', default='.')
+    parser.add_argument('--data_dir', default='../RW_functionalities_results')
     parser.add_argument('--means_path', default='neuroscope/results/7B_new/summary_refactored.pt')
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument(
@@ -101,6 +103,8 @@ if __name__=="__main__":
         "do_sample": args.do_sample,#TODO set a seed for this case!
     }
     save_path = os.path.join(
+        "..",
+        "RW_functionalities_results"
         "generations",
         args.model,
     )

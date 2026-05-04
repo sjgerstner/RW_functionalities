@@ -13,7 +13,7 @@ from src.weight_analysis_utils.plotting import SHORT_TO_LONG, _short_to_long, al
 from src.weight_analysis_utils.utils import COMBO_TO_NAME
 
 def load_wout_norms(model_name:str)->torch.Tensor:
-    path = f"results/{model_name}/vector_lengths.pt"
+    path = f"../RW_functionalities_results/results/{model_name}/vector_lengths.pt"
     if os.path.exists(path):
         return torch.load(path)
     #load model, refactor_glu doesn't change anything
@@ -30,11 +30,11 @@ def process_activation_data(summary_dict, combo, activation_location):
 
 if __name__=='__main__':
     parser = ArgumentParser()
-    parser.add_argument('--work_dir', default='.')
+    #parser.add_argument('--work_dir', default='.')
     parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424')
     parser.add_argument(
-        '--wcos_dir',
-        default='.',#'wcos_casestudies',
+        '--data_dir',
+        default='../RW_functionalities_results',
     )
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument('--refactor_glu', action='store_true')
@@ -52,7 +52,7 @@ if __name__=='__main__':
         subexps = args.subexperiments
 
     #tensor of frequency by neuron
-    SUMMARY_PATH = f'{args.work_dir}/neuroscope/results/{args.neuroscope_dir}/summary{"_refactored" if args.refactor_glu else ""}.pt'
+    SUMMARY_PATH = f'neuroscope/results/{args.neuroscope_dir}/summary{"_refactored" if args.refactor_glu else ""}.pt'
     summary_dict = torch.load(SUMMARY_PATH, map_location="cuda:0")
     if args.metric_type=='freq':
         if args.combo=='summary':
@@ -84,7 +84,7 @@ if __name__=='__main__':
     n_layers = data_tensor.shape[0]
     d_mlp = data_tensor.shape[1]
 
-    PLOT_DIR = f'{args.work_dir}/plots/{args.combo}_{args.metric_type}/{args.model}'
+    PLOT_DIR = f'{args.data_dir}/plots/{args.combo}_{args.metric_type}/{args.model}'
     os.makedirs(PLOT_DIR, exist_ok=True)
 
     #plotting by layer
@@ -132,7 +132,7 @@ if __name__=='__main__':
             PICKLE_ALL = f'{PLOT_DIR}/{args.combo}_all.pickle'
             if not os.path.exists(PICKLE_ALL):
                 #tensor of category by neuron
-                PATH = f"{args.work_dir}/{args.wcos_dir}/results/{args.model}"
+                PATH = f"{args.data_dir}/results/{args.model}"
                 DATA_PATH = f"{PATH}/data.pt"
                 if not os.path.exists(DATA_PATH):
                     DATA_PATH = f"{PATH}/refactored/data.pt"
@@ -170,7 +170,7 @@ if __name__=='__main__':
     #scatter plots
     if any(s in subexps for s in ["scatter_plots", "selected", "all_layers", "norms"]):
         #tensor of category by neuron
-        PATH = f"{args.work_dir}/{args.wcos_dir}/results/{args.model}/refactored"
+        PATH = f"{args.data_dir}/results/{args.model}/refactored"
         data = torch.load(f"{PATH}/data.pt")
         # with open(f"{PATH}/data.pt", 'rb') as f:
         #     data = pickle.load(f)

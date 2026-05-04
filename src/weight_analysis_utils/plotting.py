@@ -13,7 +13,8 @@ import seaborn as sns
 
 from .utils import COMBO_TO_NAME, VANILLA_CATEGORIES, make_combo_name_dict, floats_to_strings
 
-torch.set_grad_enabled(False)
+# torch.set_grad_enabled(False)
+#TODO if necessary, use inference mode WITHIN the functions
 
 DEVICE='cuda:0'
 
@@ -88,6 +89,8 @@ def make_color_dict(category_keys:list[str])->dict[str, tuple[float,float,float,
 def _short_to_long(key:str)->str:
     if key in SHORT_TO_LONG:
         return SHORT_TO_LONG[key]
+    elif key.endswith('_start_to_end'):
+        return key.replace('_start_to_end', ' change')
     keys = key.split('_')
     combo, metric_type = '_'.join(keys[:-1]), keys[-1]
     return f"{SHORT_TO_LONG[metric_type]} {SHORT_TO_LONG[combo]}"
@@ -127,7 +130,7 @@ def my_survey(
         for key in key_list:
             results[f"{key:.2f}"] = results[key]#add string-formatted keys
         key_list = make_full_key_list(key_list)
-        combo_to_name = make_combo_name_dict(key_list)
+        combo_to_name = make_combo_name_dict(key_list, make_string_keys=False)
         names_and_colors = make_color_dict(key_list)
         # raise NotImplementedError(
         #     f"The dictionary keys do not seem to correspond to the categories we defined: \
@@ -159,7 +162,8 @@ def my_survey(
         starts = data_cum[:, i] - widths
         rects = ax.barh(labels, widths, left=starts,
                         #height=0.5,
-                        label=combo_to_name[key], color=color)
+                        label=combo_to_name[key], color=color,
+                        edgecolor="black")
         if any(widths>text_threshold):
             r, g, b, _ = color
             text_color = 'black' if (r>.5 or g>.5 or not white_text) else 'white'#TODO
