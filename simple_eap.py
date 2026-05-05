@@ -72,7 +72,7 @@ else:
         "labels": ["mic"]})
     dataloader = DataLoader(dataset=dataset, collate_fn=collate_fn)
 
-    my_metric=mic_score #TODO also try with entropy and loss (and put minus in front)
+    my_metric=mic_score #TODO also try with entropy and loss
 
     my_args = create_args(#NOTE: this function is hard-coding the model name
         neuron_subset_name="weakening",
@@ -89,7 +89,7 @@ else:
     print("creating graph...")
     graph = Graph.from_model(
         model,
-        submlp_indices=neuron_list if args.subnodes else None,
+        submlp_indices=neuron_list if SUBNODES else None,
     )
 
     print("computing scores...")
