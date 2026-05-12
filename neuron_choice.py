@@ -47,7 +47,7 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
         data_path = f"{path}/refactored/data.pt"
     data = torch.load(data_path, map_location=args.device)
     neuron_tensor = torch.nonzero(is_in_category(data['categories'],category_key))
-    neuron_list = [(line[0].item(), line[1].item()) for line in neuron_tensor]
+    neuron_list = [(int(line[0].item()), int(line[1].item())) for line in neuron_tensor]
     if subset is not None:
         if isinstance(subset, float):
             assert 0<subset<=1
