@@ -23,7 +23,7 @@ def collate_fn(batch):
     return (sequences, sequences, labels)
 
 #metrics
-def mic_score(logits:torch.Tensor, clean_logits:torch.Tensor, input_lengths:torch.Tensor, label:torch.Tensor|None=None)->torch.Tensor:
+def mic_score(logits:torch.Tensor, clean_logits:torch.Tensor|None, input_lengths:torch.Tensor, label:torch.Tensor|None=None)->torch.Tensor:
     logits = get_logit_positions(logits, input_lengths)
     return logits[...,model.to_single_token('mic')]
 
@@ -105,7 +105,7 @@ else:
     #if is_fancy_graph:
     #attribute
     #running this modifies graph.scores:
-    attribute.attribute(
+    activation_difference = attribute.attribute(
         model,
         graph,
         dataloader,
@@ -114,6 +114,7 @@ else:
         corruption_hooks=corruption_hooks,
         keep_pos_dims=POSITIONAL,
         lower_is_better= my_metric is not mic_score,
+        return_act_diff=True,
     )
 
     if SUBNODES:
@@ -122,6 +123,7 @@ else:
         print(subnodes_df.head(40))
 
     graph.to_pt(GRAPH_FILE+'.pt')
+    torch.save(activation_difference, GRAPH_FILE+'_act_diff.pt')
 
 # if POSITIONAL:
 #     print(graph.positional_scores[:,-1,-1])
