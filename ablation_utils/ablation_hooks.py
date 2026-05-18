@@ -9,6 +9,8 @@ MIT License
 Copyright (c) 2023 Wes Gurnee
 """
 
+#TODO (low prio): extend other hooks similarly to fixed_activation_hook
+
 import torch
 
 def multiply_activation_hook(activations, hook, neuron, multiplier=1):

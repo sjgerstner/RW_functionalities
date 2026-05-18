@@ -7,7 +7,7 @@ import random
 import pandas as pd
 import torch
 
-from src.weight_analysis_utils.utils import COMBO_TO_NAME, is_in_category, VANILLA_CATEGORIES
+from src.weight_analysis_utils.utils import COMBO_TO_NAME, is_in_category, VANILLA_CATEGORIES, NAME_TO_COMBO
 
 def _key_to_name(category_key):
     if isinstance(category_key, tuple):
@@ -15,7 +15,7 @@ def _key_to_name(category_key):
     else:
         return VANILLA_CATEGORIES[category_key]
 
-def neuron_choice(args, category_key, subset=None, baseline=True):
+def neuron_choice(args, category_key, subset:float|int|str|None=None, baseline=True):
     """
     Create a list of (some) neurons of the given category,
     plus possibly a random baseline.
@@ -52,6 +52,9 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
         if isinstance(subset, float):
             assert 0<subset<=1
             subset = int(subset*len(neuron_list))
+        elif isinstance(subset, str):
+            key = NAME_TO_COMBO[subset]
+            subset = data["category_stats"][key].sum().item()
         if subset<len(neuron_list):
             neuron_list = random.sample(neuron_list, subset)
         elif subset>len(neuron_list):

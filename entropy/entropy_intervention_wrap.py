@@ -180,8 +180,18 @@ if __name__ == '__main__':
     else:
         if (args.n_neurons is None) or (args.n_neurons=='None'):
             subset = None
+        elif args.n_neurons.isdecimal():
+            subset = int(args.n_neurons)
+        elif args.n_neurons.isalpha():
+            if args.n_neurons==args.neuron_subset_name:
+                subset=None
+            else:
+                subset = args.n_neurons
         else:
-            subset = float(args.n_neurons) if '.' in args.n_neurons else int(args.n_neurons)
+            try:
+                subset = float(args.n_neurons)
+            except RuntimeError as e:
+                raise RuntimeError(f"could not parse args.n_neurons: {args.n_neurons}") from e
         neuron_list, random_baseline = neuron_choice(
             args,
             category_key=NAME_TO_COMBO[args.neuron_subset_name],
