@@ -30,7 +30,7 @@ import os
 #import time
 import tqdm
 import torch
-#import einops
+from einops import einsum
 import datasets
 import argparse
 # import numpy as np
@@ -58,6 +58,7 @@ def run_intervention_experiment(
     neuron_subset_name=None,
     save_path=None,
     mean_values:torch.Tensor|None=None,
+    neuronwise_hooks:bool=True,
     ):
 
     if neuron_subset is None:
@@ -71,15 +72,32 @@ def run_intervention_experiment(
     print("> preparing hooks...")
     conditioning_values = {}
     hooks = []
-    for lix, nix in neuron_subset:
-        conditioning_values[(lix,nix)]={}
-        hooks += make_hooks(
-            args,
-            lix, nix,
-            conditioning_values[(lix,nix)],
-            sign=(model.W_gate[lix,:,nix]@model.W_in[lix,:,nix]).item(),
-            mean_value=mean_values[(lix,nix)].item(),
-        )
+    if neuronwise_hooks:
+        for lix, nix in neuron_subset:
+            conditioning_values[(lix,nix)]={}
+            hooks += make_hooks(
+                args,
+                lix, nix,
+                conditioning_values[(lix,nix)],
+                sign=(model.blocks[lix].W_gate[:,nix]@model.blocks[lix].W_in[:,nix]).item(),
+                mean_value=mean_values[(lix,nix)].item(),
+            )
+    else:
+        neurons_by_layer = [[] for i in range(model.cfg.n_layers)]
+        for lix,nix in neuron_subset:
+            neurons_by_layer[int(lix)].append(nix)
+        for lix, neuron_list in enumerate(neurons_by_layer):
+            if not neuron_list:
+                continue
+            neurons = torch.tensor(neuron_list)
+            conditioning_values[lix]={}
+            hooks += make_hooks(
+                args,
+                layer=lix, neuron=neurons,
+                conditioning_value=conditioning_values[lix],
+                sign=einsum(model.blocks[lix].mlp.W_gate[:,neurons], model.blocks[lix].mlp.W_in[:,neurons], "model neurons, model neurons -> neurons"),
+                mean_value=mean_values[lix,neurons],
+            )
 
     hooks.append(('ln_final.hook_scale', save_layer_norm_scale_hook))
     print(">done")

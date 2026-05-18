@@ -89,6 +89,7 @@ def run_if_necessary(
             neuron_subset_name,
             save_path=save_path,
             mean_values=mean_values,
+            neuronwise_hooks=False,
         )
     else:
         print("already computed, skipping")
@@ -117,7 +118,7 @@ if __name__ == '__main__':
 
     # activation processing/subsetting arguments
     parser.add_argument(
-        '--batch_size', default=32, type=int)
+        '--batch_size', default=4, type=int)
     parser.add_argument(
         '--device', default=torch.device('cuda' if torch.cuda.is_available() else (
             'mps' if torch.backends.mps.is_available() else 'cpu')), type=str,
