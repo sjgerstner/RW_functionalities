@@ -29,10 +29,29 @@ def relu_ablation_hook(activations, hook, neuron):
     return activations
 
 def fixed_activation_hook(activations, hook, neuron=None, fixed_act:float=0.0, mask=None):
-    if mask is None:
-        mask = torch.ones(size=activations.shape[:-1], dtype=torch.bool)
-    if neuron is not None:
-        activations[:,:, neuron][mask] = fixed_act
-    else:
-        activations[:][mask] = fixed_act
-    return activations
+    try:
+        if mask is None:
+            mask = torch.ones(
+                size=activations[...,neuron].shape if neuron is not None else activations.shape,
+                dtype=torch.bool
+            )
+        if isinstance(neuron, int):
+            activations[:,:, neuron][mask] = fixed_act
+        elif isinstance(neuron, (list, torch.Tensor)):
+            for i,n in enumerate(list(neuron)):
+                if isinstance(fixed_act, (list, torch.Tensor)):
+                    fixed_act_item=fixed_act[i].item()
+                else:
+                    fixed_act_item = fixed_act
+                activations[:,:,n][mask[...,i]] = fixed_act_item
+        else:
+            activations[:][mask] = fixed_act
+        return activations
+    except RuntimeError as e:
+        raise RuntimeError(
+            f"""{e}
+            We are in hook {hook.name}, ablated neurons are {neuron}.
+            Activations have shape {activations.shape}.
+            Mask is of shape {mask.shape} with {mask.sum()} True entries.
+            Fixed act is {fixed_act}."""
+        ) from e

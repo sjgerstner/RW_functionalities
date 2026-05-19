@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euox pipefail
 
+#TODO orthogonal output
 names=("strengthening" "conditional strengthening" "proportional change" "conditional weakening" "weakening")
 signs=("+" "-")
 n_neuron_variants=("strengthening" "weakening" "None")
@@ -30,7 +31,8 @@ for intervention_type in {mean_ablation,zero_ablation}; do
             # Enforce Concurrency Limit
             # Wait until we have fewer than NUM_GPUS background jobs running
             while [ $(jobs -r | wc -l) -ge $NUM_GPUS ]; do
-                sleep 1h
+                # Wait for one to finish
+                wait -n
             done
             # Assign GPU ID cyclically (0, 1, ..., NUM_GPUS-1, 0, 1...)
             # This ensures we never exceed the limit and distribute load evenly
@@ -42,7 +44,7 @@ for intervention_type in {mean_ablation,zero_ablation}; do
                 --batch_size 4 \
                 --device cuda:$gpu_id \
                 --intervention_type $intervention_type &
-            ((job_counter++))
+            ((job_counter++)) || true
         done
     done
     #conditional ablations
@@ -51,7 +53,7 @@ for intervention_type in {mean_ablation,zero_ablation}; do
             # Enforce Concurrency Limit
             # Wait until we have fewer than NUM_GPUS background jobs running
             while [ $(jobs -r | wc -l) -ge $NUM_GPUS ]; do
-                sleep 1h
+                wait -n
             done
             # Assign GPU ID cyclically (0, 1, ..., NUM_GPUS-1, 0, 1...)
             # This ensures we never exceed the limit and distribute load evenly
@@ -63,7 +65,7 @@ for intervention_type in {mean_ablation,zero_ablation}; do
                 --batch_size 4 \
                 --device "cuda:$gpu_id" \
                 --intervention_type $intervention_type &
-            ((job_counter++))
+            ((job_counter++)) &
         done
     done
 done
