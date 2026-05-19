@@ -165,6 +165,7 @@ if __name__ == '__main__':
 
     device = args.device
 
+    #TODO before loading model, check the run will even be necessary
     model = HookedTransformer.from_pretrained(args.model, device=device, refactor_glu=True)
     #model.to(device)
     model.eval()

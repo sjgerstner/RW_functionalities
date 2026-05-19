@@ -37,13 +37,21 @@ for intervention_type in {mean_ablation,zero_ablation}; do
             # Assign GPU ID cyclically (0, 1, ..., NUM_GPUS-1, 0, 1...)
             # This ensures we never exceed the limit and distribute load evenly
             gpu_id=$((job_counter % NUM_GPUS))
-            #actually run the job
-            python -m entropy.entropy_intervention_wrap \
-                --neuron_subset_name "$neuron_subset_name" \
-                --n_neurons $n_neurons \
-                --batch_size 4 \
-                --device cuda:$gpu_id \
-                --intervention_type $intervention_type &
+            # Get the physical GPU ID corresponding to the logical slot
+            # If VISIBLE_GPUS is "0,1,2,3", then slot 0 -> physical 0, slot 1 -> physical 1.
+            # If VISIBLE_GPUS is "2,4,6", then slot 0 -> physical 2.
+            physical_gpu="${VISIBLE_GPUS[$gpu_id]}"
+            
+            # Run the job with a restricted environment
+            (
+                export CUDA_VISIBLE_DEVICES="$physical_gpu"
+                python -m entropy.entropy_intervention_wrap \
+                    --neuron_subset_name "$neuron_subset_name" \
+                    --n_neurons $n_neurons \
+                    --batch_size 4 \
+                    --device cuda:0 \
+                    --intervention_type $intervention_type
+            ) &
             ((job_counter++)) || true
         done
     done
@@ -58,14 +66,23 @@ for intervention_type in {mean_ablation,zero_ablation}; do
             # Assign GPU ID cyclically (0, 1, ..., NUM_GPUS-1, 0, 1...)
             # This ensures we never exceed the limit and distribute load evenly
             gpu_id=$((job_counter % NUM_GPUS))
-            python -m entropy.entropy_intervention_wrap \
-                --neuron_subset_name weakening \
-                --gate "${signs[$gate]}" \
-                --post "${signs[$post]}" \
-                --batch_size 4 \
-                --device "cuda:$gpu_id" \
-                --intervention_type $intervention_type &
-            ((job_counter++)) &
+            # Get the physical GPU ID corresponding to the logical slot
+            # If VISIBLE_GPUS is "0,1,2,3", then slot 0 -> physical 0, slot 1 -> physical 1.
+            # If VISIBLE_GPUS is "2,4,6", then slot 0 -> physical 2.
+            physical_gpu="${VISIBLE_GPUS[$gpu_id]}"
+            
+            # Run the job with a restricted environment
+            (
+                export CUDA_VISIBLE_DEVICES="$physical_gpu"
+                python -m entropy.entropy_intervention_wrap \
+                    --neuron_subset_name weakening \
+                    --gate "${signs[$gate]}" \
+                    --post "${signs[$post]}" \
+                    --batch_size 4 \
+                    --device cuda:0 \
+                    --intervention_type $intervention_type
+            ) &
+            ((job_counter++)) || true
         done
     done
 done
