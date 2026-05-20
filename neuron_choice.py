@@ -12,8 +12,7 @@ from src.weight_analysis_utils.utils import COMBO_TO_NAME, is_in_category, VANIL
 def _key_to_name(category_key):
     if isinstance(category_key, tuple):
         return COMBO_TO_NAME[category_key]
-    else:
-        return VANILLA_CATEGORIES[category_key]
+    return VANILLA_CATEGORIES[category_key]
 
 def neuron_choice(args, category_key, subset:float|int|str|None=None, baseline=True):
     """

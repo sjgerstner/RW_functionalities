@@ -10,6 +10,16 @@ from entropy.entropy_intervention import run_intervention_experiment
 from neuron_choice import neuron_choice
 from ablation_utils.utils import get_mean_values
 
+def make_save_path(args, neuron_subset_name, intervention_type):
+    return os.path.join(
+        args.data_dir,
+        args.output_dir,
+        args.model,
+        args.token_dataset.split('/')[-1],
+        neuron_subset_name,
+        str(intervention_type)+'_'+str(args.intervention_param),
+    )
+
 def run_with_baseline(
     args,
     model,
@@ -18,16 +28,20 @@ def run_with_baseline(
     neuron_list=None,
     random_baseline=None,
     subset=None,
+    save_path:str|None=None,
+    save_path_baseline:str|None=None,
+    neuron_subset_name:str|None=None,
+    intervention_type:str|None=None,
 ):
-    # if neuron_list is None:
-    #     neuron_list = []
-    if neuron_list:
-        neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
-        intervention_type=args.intervention_type
-    else:
-        neuron_subset_name='baseline'
-        random_baseline=None
-        intervention_type=None
+    if neuron_subset_name is None:
+        if neuron_list:
+            neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+            intervention_type=args.intervention_type
+        else:
+            neuron_subset_name='baseline'
+            random_baseline=None
+            intervention_type=None
+
     if intervention_type=='mean_ablation':
         mean_values = get_mean_values(args)
     else:
@@ -42,6 +56,7 @@ def run_with_baseline(
         neuron_subset_name=neuron_subset_name,
         intervention_type=intervention_type,
         mean_values=mean_values,
+        save_path=save_path,
     )
     if random_baseline is not None and args.gate is None and args.post is None:
         run_if_necessary(
@@ -53,6 +68,7 @@ def run_with_baseline(
             neuron_subset_name=f'{neuron_subset_name}_baseline',
             intervention_type=intervention_type,
             mean_values=mean_values,
+            save_path=save_path_baseline,
         )
 
 def run_if_necessary(
@@ -64,19 +80,18 @@ def run_if_necessary(
     neuron_subset_name=None,
     intervention_type=None,
     mean_values:torch.Tensor|None=None,
+    save_path:str|None=None,
 ):
     if not neuron_subset_name:
         neuron_subset_name = '_'.join([f'{l}.{n}' for l, n in neuron_subset])
     if args.gate or args.post:
         neuron_subset_name = f'{neuron_subset_name}_gate{args.gate}_post{args.post}'
-    save_path = os.path.join(
-        args.data_dir,
-        args.output_dir,
-        args.model,
-        args.token_dataset.split('/')[-1],
-        neuron_subset_name,
-        str(intervention_type)+'_'+str(args.intervention_param),
-    )
+    if save_path is None:
+        save_path = make_save_path(
+            args,
+            neuron_subset_name=neuron_subset_name,
+            intervention_type=intervention_type
+        )
 
     print(neuron_subset_name)
     if not os.path.exists(save_path):
@@ -103,7 +118,10 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default='../RW_functionalities_results')
     parser.add_argument(
         '--output_dir', default='intervention_results')
-    parser.add_argument('--means_path', default='neuroscope/results/OLMo-7B-0424/summary_refactored.pt')
+    parser.add_argument(
+        '--means_path',
+        default='neuroscope/results/OLMo-7B-0424/summary_refactored.pt'
+    )
     parser.add_argument(
         '--model',
         default='allenai/OLMo-7B-0424-hf',
@@ -146,7 +164,9 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--intervention_type',
-        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation", "mean_ablation"],
+        choices=[
+            "zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation", "mean_ablation"
+        ],
         default="zero_ablation",
     )
     parser.add_argument(
@@ -165,21 +185,14 @@ if __name__ == '__main__':
 
     device = args.device
 
-    #TODO before loading model, check the run will even be necessary
-    model = HookedTransformer.from_pretrained(args.model, device=device, refactor_glu=True)
-    #model.to(device)
-    model.eval()
-    torch.set_grad_enabled(False)
-
-    tokenized_dataset = datasets.load_from_disk(
-        args.token_dataset
-    )
-    tokenized_dataset = tokenized_dataset.select_columns('input_ids')
-    if args.neuron_subset_name=='baseline':
-        neuron_list = []
-        random_baseline=None
-        subset=None
-    else:
+    #make list of neurons to ablate
+    neuron_list = []
+    random_baseline=None
+    subset=None
+    neuron_subset_name='baseline'
+    random_baseline=None
+    intervention_type=None
+    if args.neuron_subset_name!='baseline':
         if (args.n_neurons is None) or (args.n_neurons=='None'):
             subset = None
         elif args.n_neurons.isdecimal():
@@ -199,13 +212,48 @@ if __name__ == '__main__':
             category_key=NAME_TO_COMBO[args.neuron_subset_name],
             subset=subset,
         )
-
-    run_with_baseline(
+        neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+        intervention_type=args.intervention_type
+    #make the save path
+    save_paths = [make_save_path(
         args,
-        model,
-        tokenized_dataset,
-        device,
-        neuron_list,
-        random_baseline,
-        subset=subset,
-    )
+        neuron_subset_name=neuron_subset_name,
+        intervention_type=intervention_type,
+    )]
+    if args.neuron_subset_name!='baseline':
+        save_paths.append(make_save_path(
+            args,
+            neuron_subset_name=f'{neuron_subset_name}_baseline',
+            intervention_type=intervention_type,
+        ))
+
+    #print which experiments we still need to run
+    for p in save_paths:
+        if not os.path.exists(p):
+            print(p)
+
+    #go!
+    if any(not os.path.exists(p) for p in save_paths):
+        model = HookedTransformer.from_pretrained(args.model, device=device, refactor_glu=True)
+        #model.to(device)
+        model.eval()
+        torch.set_grad_enabled(False)
+
+        tokenized_dataset = datasets.load_from_disk(
+            args.token_dataset
+        )
+        tokenized_dataset = tokenized_dataset.select_columns('input_ids')
+
+        run_with_baseline(
+            args,
+            model,
+            tokenized_dataset,
+            device,
+            neuron_list,
+            random_baseline,
+            subset=subset,
+            save_path=save_paths[0],
+            save_path_baseline=None if args.neuron_subset_name=='baseline' else save_paths[1],
+            neuron_subset_name=neuron_subset_name,
+            intervention_type=intervention_type,
+        )
