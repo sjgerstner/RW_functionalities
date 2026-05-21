@@ -11,7 +11,11 @@ import einops
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .utils import COMBO_TO_NAME, VANILLA_CATEGORIES, make_combo_name_dict, floats_to_strings
+from .utils import (
+    COMBO_TO_NAME, VANILLA_CATEGORIES,
+    make_combo_name_dict, floats_to_strings,
+    compute_category, layerwise_count
+)
 
 # torch.set_grad_enabled(False)
 #TODO if necessary, use inference mode WITHIN the functions
@@ -89,7 +93,7 @@ def make_color_dict(category_keys:list[str])->dict[str, tuple[float,float,float,
 def _short_to_long(key:str)->str:
     if key in SHORT_TO_LONG:
         return SHORT_TO_LONG[key]
-    elif key.endswith('_start_to_end'):
+    if key.endswith('_start_to_end'):
         return key.replace('_start_to_end', ' change')
     keys = key.split('_')
     combo, metric_type = '_'.join(keys[:-1]), keys[-1]
@@ -181,6 +185,19 @@ def my_survey(
 
     return fig, ax
 
+def half_coarse_plot(data, model_name, bins=10):#TODO use this function
+    categories = compute_category(data, bins=bins)
+    assert isinstance(categories, torch.Tensor)
+    layerwise_counts = layerwise_count(categories)
+    fig, ax = my_survey(
+        layerwise_counts,
+        model_name=model_name,
+        white_text=False,
+        text_threshold=20000,#without counts
+    )
+    #TODO save?
+    return fig, ax
+
 def wcos_plot(data, layer_list, arrangement):
     if "gateout" in data:
         return wcos_scatter(data, layer_list, arrangement)
@@ -261,7 +278,7 @@ def wcos_scatter(data, layer_list, arrangement):
     return fig, axs
 
 def wcos_vanilla(data:dict[str,torch.Tensor], layer_list:list[int]):
-    """Strip plot of weight cosines by layer, for vanilla activation functions.
+    """2D histogram of weight cosines by layer, for vanilla activation functions.
 
     Args:
         data (dict[str,torch.Tensor]):
@@ -754,7 +771,7 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         fig, _ax = my_survey(data['category_stats'], model_name)
         fig.savefig(f"{path}/coarse.pdf", bbox_inches='tight')
         plt.close()
-    #quartiles
+    #quartiles/boxplots
     if "plot_boxplots" in experiments:# and not os.path.exists(f"{path}/quartiles.pdf")
         fig, _ax = plot_boxplots(data, model_name)
         fig.savefig(f"{path}/boxplot.pdf", bbox_inches='tight')
