@@ -27,6 +27,7 @@ EXPERIMENT_LIST = [
     "plot_norms",
     "plots_cosines_vs_norms",
     "plot_norm_in_norm_out",
+    "plot_half_coarse",
 ]
 MODEL_LIST = [
     "allenai/OLMo-7B-0424-hf",
@@ -41,6 +42,32 @@ MODEL_LIST = [
     "Qwen/Qwen2.5-0.5B",
     "Qwen/Qwen2.5-7B",
     "yi-6b",
+]
+VANILLA_MODELS = [
+    "gpt2-small",
+    "gpt2-medium",
+    "gpt2-large",
+    "gpt2-xl",
+    "distilgpt2",
+    "opt-125m",
+    "opt-1.3b",
+    "opt-6.7b",
+    "opt-13b",
+    "gpt-j-6B",
+    "pythia-14m",
+    "pythia-1b",
+    "pythia-6.9b",
+    "pythia-12b",
+    "bloom-560m",
+    "bloom-1b1",
+    "bloom-1b7",
+    "bloom-7b1",
+    "bert-base-cased",
+    "bert-large-cased",
+    "t5-small",
+    "t5-base",
+    "t5-large",
+    "othello-gpt",
 ]
 
 def cosines(mlp_weights):
@@ -164,10 +191,16 @@ if __name__=="__main__":
         help="selected layers for main paper plot"
     )
     args = parser.parse_args()
+    if args.model==["all"]:
+        models = MODEL_LIST + VANILLA_MODELS
+    elif args.model==["vanilla"]:
+        models = VANILLA_MODELS
+    else:
+        models = args.model
 
     if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:
         model_to_medians_dict = {}
-    for model_name in args.model:
+    for model_name in models:
         print(model_name)
         if args.checkpoints==[None]:
             data = analysis(args, model_name)

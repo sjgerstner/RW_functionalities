@@ -185,7 +185,7 @@ def my_survey(
 
     return fig, ax
 
-def half_coarse_plot(data, model_name, bins=10):#TODO use this function
+def plot_half_coarse(data, model_name, bins=10):
     categories = compute_category(data, bins=bins)
     assert isinstance(categories, torch.Tensor)
     layerwise_counts = layerwise_count(categories)
@@ -193,9 +193,8 @@ def half_coarse_plot(data, model_name, bins=10):#TODO use this function
         layerwise_counts,
         model_name=model_name,
         white_text=False,
-        text_threshold=20000,#without counts
+        text_threshold=20000,#so large that there will be no text
     )
-    #TODO save?
     return fig, ax
 
 def wcos_plot(data, layer_list, arrangement):
@@ -775,4 +774,8 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
     if "plot_boxplots" in experiments:# and not os.path.exists(f"{path}/quartiles.pdf")
         fig, _ax = plot_boxplots(data, model_name)
         fig.savefig(f"{path}/boxplot.pdf", bbox_inches='tight')
+        plt.close()
+    if "plot_half_coarse" in experiments:
+        fig, _ax = plot_half_coarse(data, model_name)
+        fig.savefig(f"{path}/half_coarse.pdf", bbox_inches='tight')
         plt.close()
