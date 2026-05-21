@@ -316,8 +316,9 @@ def plot_boxplots(data:dict[str,torch.Tensor], model_name:str, layer_list:list[i
         layer_list = range(data['linout'].shape[0])
     #n_layers = data['gatelin'].shape[0] if layer_list is None else len(layer_list)
     n_neurons = data["linout"].shape[-1]
+    nrows = 3 if "gateout" in data else 1
     fig, axs = plt.subplots(
-        nrows=3 if "gateout" in data else 1,
+        nrows=nrows,
         ncols=1,
         sharex=True,
     )
@@ -332,8 +333,11 @@ def plot_boxplots(data:dict[str,torch.Tensor], model_name:str, layer_list:list[i
             for layer in layer_list for neuron in range(n_neurons)
         ]
     )
-    for i, (short,long) in enumerate(SHORT_TO_LONG.items()):
-        current_ax = axs[i] if "gate" in data else axs
+    shorts = [short for short in ["gatelin", "gateout", "linout"] if short in data]
+    for i in range(nrows):
+        short = shorts[i]
+        long = SHORT_TO_LONG[short]
+        current_ax = axs[i] if "gateout" in data else axs
         if short not in data:
             continue
         mydata = data[short]
