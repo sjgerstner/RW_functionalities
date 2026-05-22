@@ -21,6 +21,7 @@ EXPERIMENT_LIST = [
     "plot_fine",#create fine-grained plot
     "plot_selected",
     "plot_coarse",#create coarse-grained plot (categories by layer)
+    "make_table",
     "plot_boxplots",#make boxplots of cosine similarities by layer
     "plot_all_medians",#make one plot with the median cos(w_in,w_out) similarities (y) across layers (x) of all models (one line per model)
     "plot_selected_medians",
@@ -28,6 +29,7 @@ EXPERIMENT_LIST = [
     "plots_cosines_vs_norms",
     "plot_norm_in_norm_out",
     "plot_half_coarse",
+    "half_coarse_table",
 ]
 MODEL_LIST = [
     "allenai/OLMo-7B-0424-hf",
@@ -160,13 +162,13 @@ if __name__=="__main__":
         help='whether to refactor the weights such that cos(w_gate,w_in)>=0'
     )
     parser.add_argument(
-        '--experiments',
+        '--experiments', "--experiment",
         nargs='+',
         default=EXPERIMENT_LIST,
         help="which experiment(s) to perform, see EXPERIMENT_LIST for details"
     )
     parser.add_argument(
-        "--model",
+        "--model", "--models",
         nargs='+',
         default=MODEL_LIST,
         help='one or several TransformerLens models',

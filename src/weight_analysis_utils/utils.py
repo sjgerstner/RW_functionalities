@@ -372,3 +372,10 @@ def get_advanced_data(
     if path:
         torch.save(data, f"{path}/data.pt")
     return data
+
+def half_coarse_categories(data, bins=10):
+    categories = compute_category(data, bins=bins)
+    assert isinstance(categories, torch.Tensor)
+    layerwise_counts = layerwise_count(categories)
+    return layerwise_counts
+
