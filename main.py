@@ -192,6 +192,7 @@ if __name__=="__main__":
         default=[0,14,27],
         help="selected layers for main paper plot"
     )
+    parser.add_argument('--median_plot_name', default='medians')
     args = parser.parse_args()
     if args.model==["all"]:
         models = MODEL_LIST + VANILLA_MODELS
@@ -220,7 +221,7 @@ if __name__=="__main__":
                 del data
     if "plot_all_medians" in args.experiments:
         fig, ax = plotting.plot_all_medians(model_to_medians_dict)
-        fig.savefig(f'{args.work_dir}/results/medians.pdf', bbox_inches='tight')
+        fig.savefig(f'{args.work_dir}/results/{args.median_plot_name}.pdf', bbox_inches='tight')
         plt.close()
     if "plot_selected_medians" in args.experiments:
         tiny_models = [
