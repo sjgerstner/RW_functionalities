@@ -1,6 +1,8 @@
 # Software for the RW functionalities paper (weakening neurons)
 
-Data / results will be published separately.
+This code is intended to help you reproduce the results and plots from the Weakening Neurons paper.
+
+We plan to publish data / results separately.
 
 ## Structure
 
