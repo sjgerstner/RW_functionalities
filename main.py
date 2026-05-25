@@ -21,12 +21,15 @@ EXPERIMENT_LIST = [
     "plot_fine",#create fine-grained plot
     "plot_selected",
     "plot_coarse",#create coarse-grained plot (categories by layer)
+    "make_table",
     "plot_boxplots",#make boxplots of cosine similarities by layer
     "plot_all_medians",#make one plot with the median cos(w_in,w_out) similarities (y) across layers (x) of all models (one line per model)
     "plot_selected_medians",
     "plot_norms",
     "plots_cosines_vs_norms",
     "plot_norm_in_norm_out",
+    "plot_half_coarse",
+    "half_coarse_table",
 ]
 MODEL_LIST = [
     "allenai/OLMo-7B-0424-hf",
@@ -41,6 +44,32 @@ MODEL_LIST = [
     "Qwen/Qwen2.5-0.5B",
     "Qwen/Qwen2.5-7B",
     "yi-6b",
+]
+VANILLA_MODELS = [
+    "gpt2-small",
+    "gpt2-medium",
+    "gpt2-large",
+    "gpt2-xl",
+    "distilgpt2",
+    "opt-125m",
+    "opt-1.3b",
+    "opt-6.7b",
+    "opt-13b",
+    "gpt-j-6B",
+    "pythia-14m",
+    "pythia-1b",
+    "pythia-6.9b",
+    "pythia-12b",
+    "bloom-560m",
+    "bloom-1b1",
+    "bloom-1b7",
+    "bloom-7b1",
+    "bert-base-cased",
+    "bert-large-cased",
+    "t5-small",
+    "t5-base",
+    "t5-large",
+    "othello-gpt",
 ]
 
 def cosines(mlp_weights):
@@ -133,13 +162,13 @@ if __name__=="__main__":
         help='whether to refactor the weights such that cos(w_gate,w_in)>=0'
     )
     parser.add_argument(
-        '--experiments',
+        '--experiments', "--experiment",
         nargs='+',
         default=EXPERIMENT_LIST,
         help="which experiment(s) to perform, see EXPERIMENT_LIST for details"
     )
     parser.add_argument(
-        "--model",
+        "--model", "--models",
         nargs='+',
         default=MODEL_LIST,
         help='one or several TransformerLens models',
@@ -163,11 +192,18 @@ if __name__=="__main__":
         default=[0,14,27],
         help="selected layers for main paper plot"
     )
+    parser.add_argument('--median_plot_name', default='medians')
     args = parser.parse_args()
+    if args.model==["all"]:
+        models = MODEL_LIST + VANILLA_MODELS
+    elif args.model==["vanilla"]:
+        models = VANILLA_MODELS
+    else:
+        models = args.model
 
     if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:
         model_to_medians_dict = {}
-    for model_name in args.model:
+    for model_name in models:
         print(model_name)
         if args.checkpoints==[None]:
             data = analysis(args, model_name)
@@ -185,7 +221,7 @@ if __name__=="__main__":
                 del data
     if "plot_all_medians" in args.experiments:
         fig, ax = plotting.plot_all_medians(model_to_medians_dict)
-        fig.savefig(f'{args.work_dir}/results/medians.pdf', bbox_inches='tight')
+        fig.savefig(f'{args.work_dir}/results/{args.median_plot_name}.pdf', bbox_inches='tight')
         plt.close()
     if "plot_selected_medians" in args.experiments:
         tiny_models = [

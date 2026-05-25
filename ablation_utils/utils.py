@@ -30,7 +30,7 @@ def get_mean_values(args):
         ], dim=0), dim=0)
     return mean_values
 
-def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:float=0.0, positions:torch.Tensor|None=None):
+def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:float|torch.Tensor=0.0, positions:torch.Tensor|None=None):
     """Adapted from https://github.com/wesg52/universal-neurons,
     hence original license and copyright apply:
     MIT License
@@ -48,8 +48,6 @@ def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:
     Returns:
         _type_: _description_
     """
-    #TODO variant for big set of neurons from same layer (efficiency!).
-    #Then, adapt the scripts that call this function
     if conditioning_value is None:
         conditioning_value = {}
     out = []
@@ -86,8 +84,9 @@ def store_conditioning_hook(activation, hook, conditioning_values, neuron=None, 
     """Store the conditioning activation"""
     if neuron is not None:
         conditioning_values[hook.name] = activation[:,:,neuron].clone()
-        if sign<0:
-            conditioning_values[hook.name] *=-1
+        # if sign<0:
+        #     conditioning_values[hook.name] *=-1
+        conditioning_values[hook.name] *= sign
     else:
         conditioning_values[hook.name] = activation.clone()
 
@@ -105,7 +104,10 @@ def conditional_ablation_hook(
     hook_loc = '.'.join(hook.name.split('.')[:-1])
     gate_loc = hook_loc+'.hook_pre'
     post_loc = hook_loc+'.hook_post'
-    condition = torch.ones(activation.shape[:-1], dtype=torch.bool, device=activation.device)
+    condition = torch.ones(
+        activation[...,neuron].shape if neuron is not None else activation.shape,
+        dtype=torch.bool, device=activation.device
+    )
     if gate_loc in conditioning_value:
         if args.gate=='+':
             condition = conditioning_value[gate_loc]>0
@@ -124,7 +126,7 @@ def conditional_ablation_hook(
             raise NotImplementedError("argument 'post' has to be + or -")
     #optionally, ablate only at given positions
     if positions is not None:
-        position_mask = torch.zeros(activation.shape[:-1],dtype=torch.bool, device=activation.device)
+        position_mask = torch.zeros(condition.shape, dtype=torch.bool, device=activation.device)
         position_mask[:,positions]=True
         condition = torch.logical_and(condition, position_mask)
     activation = ablation_hook(activation, hook, args, neuron=neuron, mask=condition, mean_value=mean_value)
@@ -140,7 +142,10 @@ def ablation_hook(activation, hook, args, neuron=None, mask=None, mean_value:flo
     """
     #TODO replace args by args.intervention_type
     if mask is None:
-        mask=torch.ones(size=activation.shape[:-1], dtype=torch.bool)
+        mask=torch.ones(
+            size=activation[...,neuron].shape if neuron is not None else activation.shape,
+            dtype=torch.bool
+        )
     if args.intervention_type == 'zero_ablation':
         # if mask is not None:
         #     activation = masked_zero_ablation_hook(activation,hook,neuron,mask)

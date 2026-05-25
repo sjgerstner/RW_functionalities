@@ -7,15 +7,14 @@ import random
 import pandas as pd
 import torch
 
-from src.weight_analysis_utils.utils import COMBO_TO_NAME, is_in_category, VANILLA_CATEGORIES
+from src.weight_analysis_utils.utils import COMBO_TO_NAME, is_in_category, VANILLA_CATEGORIES, NAME_TO_COMBO
 
 def _key_to_name(category_key):
     if isinstance(category_key, tuple):
         return COMBO_TO_NAME[category_key]
-    else:
-        return VANILLA_CATEGORIES[category_key]
+    return VANILLA_CATEGORIES[category_key]
 
-def neuron_choice(args, category_key, subset=None, baseline=True):
+def neuron_choice(args, category_key, subset:float|int|str|None=None, baseline=True):
     """
     Create a list of (some) neurons of the given category,
     plus possibly a random baseline.
@@ -47,11 +46,14 @@ def neuron_choice(args, category_key, subset=None, baseline=True):
         data_path = f"{path}/refactored/data.pt"
     data = torch.load(data_path, map_location=args.device)
     neuron_tensor = torch.nonzero(is_in_category(data['categories'],category_key))
-    neuron_list = [tuple(line) for line in neuron_tensor]
+    neuron_list = [(int(line[0].item()), int(line[1].item())) for line in neuron_tensor]
     if subset is not None:
         if isinstance(subset, float):
             assert 0<subset<=1
             subset = int(subset*len(neuron_list))
+        elif isinstance(subset, str):
+            key = NAME_TO_COMBO[subset]
+            subset = data["category_stats"][key].sum().item()
         if subset<len(neuron_list):
             neuron_list = random.sample(neuron_list, subset)
         elif subset>len(neuron_list):

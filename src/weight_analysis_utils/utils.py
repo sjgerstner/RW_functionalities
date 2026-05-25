@@ -236,12 +236,14 @@ def beta_randomness_region(d, p=0.05):
 def _approx(x, threshold:float|None=.5, bins:int|None=None)->Tensor|float|int:
     """If both bins and thresholds are not None, bins wins."""
     if bins is not None:
-        ans = torch.floor(x*bins/2)*2/bins        
+        ans = torch.floor(x*bins/2)*2/bins
     elif threshold is not None:
         ans = torch.where(x>threshold, 1,0)
         ans = torch.where(x<-threshold, -1, ans)
     else:#threshold is None and bins is None
-        raise RuntimeError("Please specify exactly one of threshold and bins. You set both to None.")
+        raise RuntimeError(
+            "Please specify exactly one of threshold and bins. You set both to None."
+        )
     if isinstance(x, float):
         return ans.item()
     return ans
@@ -370,3 +372,10 @@ def get_advanced_data(
     if path:
         torch.save(data, f"{path}/data.pt")
     return data
+
+def half_coarse_categories(data, bins=10):
+    categories = compute_category(data, bins=bins)
+    assert isinstance(categories, torch.Tensor)
+    layerwise_counts = layerwise_count(categories)
+    return layerwise_counts
+

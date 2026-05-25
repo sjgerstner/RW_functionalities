@@ -4,6 +4,7 @@ import itertools
 
 import numpy as np
 import pandas as pd
+from pandas.io.formats.style import Styler
 from scipy import stats
 import torch
 import einops
@@ -11,7 +12,11 @@ import einops
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .utils import COMBO_TO_NAME, VANILLA_CATEGORIES, make_combo_name_dict, floats_to_strings
+from .utils import (
+    COMBO_TO_NAME, VANILLA_CATEGORIES,
+    make_combo_name_dict, floats_to_strings,
+    half_coarse_categories
+)
 
 # torch.set_grad_enabled(False)
 #TODO if necessary, use inference mode WITHIN the functions
@@ -89,7 +94,7 @@ def make_color_dict(category_keys:list[str])->dict[str, tuple[float,float,float,
 def _short_to_long(key:str)->str:
     if key in SHORT_TO_LONG:
         return SHORT_TO_LONG[key]
-    elif key.endswith('_start_to_end'):
+    if key.endswith('_start_to_end'):
         return key.replace('_start_to_end', ' change')
     keys = key.split('_')
     combo, metric_type = '_'.join(keys[:-1]), keys[-1]
@@ -97,9 +102,27 @@ def _short_to_long(key:str)->str:
 
 def make_full_key_list(key_list:list[float])->list[str]:
     old_len = len(key_list)
-    step_size = min(key_list[i+1]-key_list[i] for i in range(old_len-1))
+    step_size = min(abs(key_list[i+1]-key_list[i]) for i in range(old_len-1))
     float_list = np.linspace(-1,1, num = round(2/step_size), endpoint=False).tolist()
     return floats_to_strings(float_list)
+
+def get_names(results:dict):
+    if isinstance(next(iter(results)), tuple):
+        names_and_colors, combo_to_name = CATEGORY_COLORS, COMBO_TO_NAME
+        new_results={COMBO_TO_NAME[key]:value for key,value in results.items()}
+    elif isinstance(next(iter(results)), int):
+        names_and_colors, combo_to_name = VANILLA_COLORS, VANILLA_CATEGORIES
+        new_results={VANILLA_CATEGORIES[key]:value for key,value in results.items()}
+    else:
+        new_results = {}
+        #print(results.keys())
+        key_list = list(results.keys())
+        for key in key_list:
+            new_results[f"{key:.2f}"] = results[key]#add string-formatted keys
+        key_list = make_full_key_list(key_list)
+        combo_to_name = make_combo_name_dict(key_list, make_string_keys=False)
+        names_and_colors = make_color_dict(key_list)
+    return names_and_colors, combo_to_name, new_results
 
 def my_survey(
     results:dict, model_name:str|None=None, white_text=True, text_threshold=700,
@@ -122,23 +145,7 @@ def my_survey(
     n_layers = results[key_list[0]].numel()
     original_results_device = results[key_list[0]].device
     labels = [f'Layer {n}' for n in range(n_layers)]#[0,...,31] if 32 layers
-    if (1,1,1) in results.keys():
-        names_and_colors, combo_to_name = CATEGORY_COLORS, COMBO_TO_NAME
-    elif 1 in results.keys():
-        names_and_colors, combo_to_name = VANILLA_COLORS, VANILLA_CATEGORIES
-    else:
-        for key in key_list:
-            results[f"{key:.2f}"] = results[key]#add string-formatted keys
-        key_list = make_full_key_list(key_list)
-        combo_to_name = make_combo_name_dict(key_list, make_string_keys=False)
-        names_and_colors = make_color_dict(key_list)
-        # raise NotImplementedError(
-        #     f"The dictionary keys do not seem to correspond to the categories we defined: \
-        #         {results.keys()}"
-        # )
-    #my preprocessing:
-    # labels = list(results.keys())
-    # data = np.array(list(results.values()))
+    names_and_colors, combo_to_name, _new_results = get_names(results)
     data = np.array(torch.stack(
         [
             results[key] if key in results
@@ -180,6 +187,19 @@ def my_survey(
         ax.set_title(model_name)
 
     return fig, ax
+
+def make_table(layerwise_counts):
+    _, combo_name_dict, layerwise_counts = get_names(layerwise_counts)
+    #print(combo_name_dict, layerwise_counts.keys())
+    df = pd.DataFrame.from_dict(layerwise_counts, orient='columns')
+    df.rename(
+        columns=combo_name_dict,
+        inplace=True,#not strictly necessary but for clarity
+    )
+    df.index.name = 'Layer'
+    df.loc['Total'] = df.sum()
+    styler = Styler(df)
+    return styler
 
 def wcos_plot(data, layer_list, arrangement):
     if "gateout" in data:
@@ -261,7 +281,7 @@ def wcos_scatter(data, layer_list, arrangement):
     return fig, axs
 
 def wcos_vanilla(data:dict[str,torch.Tensor], layer_list:list[int]):
-    """Strip plot of weight cosines by layer, for vanilla activation functions.
+    """2D histogram of weight cosines by layer, for vanilla activation functions.
 
     Args:
         data (dict[str,torch.Tensor]):
@@ -300,8 +320,9 @@ def plot_boxplots(data:dict[str,torch.Tensor], model_name:str, layer_list:list[i
         layer_list = range(data['linout'].shape[0])
     #n_layers = data['gatelin'].shape[0] if layer_list is None else len(layer_list)
     n_neurons = data["linout"].shape[-1]
+    nrows = 3 if "gateout" in data else 1
     fig, axs = plt.subplots(
-        nrows=3 if "gateout" in data else 1,
+        nrows=nrows,
         ncols=1,
         sharex=True,
     )
@@ -316,8 +337,11 @@ def plot_boxplots(data:dict[str,torch.Tensor], model_name:str, layer_list:list[i
             for layer in layer_list for neuron in range(n_neurons)
         ]
     )
-    for i, (short,long) in enumerate(SHORT_TO_LONG.items()):
-        current_ax = axs[i] if "gate" in data else axs
+    shorts = [short for short in ["gatelin", "gateout", "linout"] if short in data]
+    for i in range(nrows):
+        short = shorts[i]
+        long = SHORT_TO_LONG[short]
+        current_ax = axs[i] if "gateout" in data else axs
         if short not in data:
             continue
         mydata = data[short]
@@ -349,7 +373,7 @@ def plot_boxplots(data:dict[str,torch.Tensor], model_name:str, layer_list:list[i
 
 def plot_all_medians(model_to_medians_dict):
     """make one plot with the median cos(w_in,w_out) similarities across layers of all models"""
-    line_styles = ['solid', 'dotted']
+    line_styles = ['solid', 'dotted', 'dashed', 'dashdot']
     fig, ax = plt.subplots()
     fig.set_figwidth(6.75)
     fig.set_figheight(2)
@@ -754,8 +778,34 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         fig, _ax = my_survey(data['category_stats'], model_name)
         fig.savefig(f"{path}/coarse.pdf", bbox_inches='tight')
         plt.close()
-    #quartiles
+    #coarse table of category stats
+    if "make_table" in experiments:
+        styler = make_table(data['category_stats'])
+        styler.to_latex(
+            f"{path}/table.tex",
+            label=f'tab:{model_name}',
+            caption=f'Distribution of neuron IO classes by layer and category in {model_name}',
+            environment='table*'
+        )
+    #quartiles/boxplots
     if "plot_boxplots" in experiments:# and not os.path.exists(f"{path}/quartiles.pdf")
         fig, _ax = plot_boxplots(data, model_name)
         fig.savefig(f"{path}/boxplot.pdf", bbox_inches='tight')
         plt.close()
+    if any(s in experiments for s in ("plot_half_coarse", "half_coarse_table")):
+        half_coarse = half_coarse_categories(data)
+        if "plot_half_coarse" in experiments:
+            fig, _ax = my_survey(
+                half_coarse, model_name,
+                text_threshold=20000,#so large that there will be no text
+            )
+            fig.savefig(f"{path}/half_coarse.pdf", bbox_inches='tight')
+            plt.close()
+        if "half_coarse_table" in experiments:
+            styler = make_table(half_coarse)
+            styler.to_latex(
+                f"{path}/half_coarse_table.tex",
+                label=f'tab:{model_name}_half_coarse',
+                caption=f'Distribution of neuron IO cosines by layer in {model_name}',
+                environment='table*'
+            )
