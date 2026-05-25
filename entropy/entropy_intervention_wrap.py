@@ -25,7 +25,7 @@ def run_with_baseline(
     model,
     tokenized_dataset,
     device,
-    neuron_list=None,
+    neuron_list,#=None,
     random_baseline=None,
     subset=None,
     save_path:str|None=None,
@@ -233,7 +233,7 @@ if __name__ == '__main__':
             print(p)
 
     #go!
-    if any(not os.path.exists(p) for p in save_paths):
+    if any(not os.path.exists(p) for p in save_paths) and neuron_list is not None:
         model = HookedTransformer.from_pretrained(args.model, device=device, refactor_glu=True)
         #model.to(device)
         model.eval()
@@ -249,8 +249,8 @@ if __name__ == '__main__':
             model,
             tokenized_dataset,
             device,
-            neuron_list,
-            random_baseline,
+            neuron_list=neuron_list,
+            random_baseline=random_baseline,
             subset=subset,
             save_path=save_paths[0],
             save_path_baseline=None if args.neuron_subset_name=='baseline' else save_paths[1],

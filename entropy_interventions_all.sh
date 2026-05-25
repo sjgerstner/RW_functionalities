@@ -26,7 +26,7 @@ fi
 
 job_counter=0
 for intervention_type in {mean_ablation,zero_ablation}; do
-    for n_neurons in $n_neuron_variants; do
+    for n_neurons in "${n_neuron_variants[@]}"; do
         for neuron_subset_name in "${names[@]}"; do
             # Enforce Concurrency Limit
             # Wait until we have fewer than NUM_GPUS background jobs running
