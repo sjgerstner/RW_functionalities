@@ -785,6 +785,7 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
             f"{path}/table.tex",
             label=f'tab:{model_name}',
             caption=f'Distribution of neuron IO classes by layer and category in {model_name}',
+            environment='table*'
         )
     #quartiles/boxplots
     if "plot_boxplots" in experiments:# and not os.path.exists(f"{path}/quartiles.pdf")
@@ -806,4 +807,5 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
                 f"{path}/half_coarse_table.tex",
                 label=f'tab:{model_name}_half_coarse',
                 caption=f'Distribution of neuron IO cosines by layer in {model_name}',
+                environment='table*'
             )
