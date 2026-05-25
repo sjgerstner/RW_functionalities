@@ -1,8 +1,7 @@
 #!/bin/bash
 set -euox pipefail
 
-#TODO orthogonal output
-names=("strengthening" "conditional strengthening" "proportional change" "conditional weakening" "weakening")
+names=("strengthening" "conditional strengthening" "proportional change" "conditional weakening" "weakening" "orthogonal output")
 signs=("+" "-")
 n_neuron_variants=("strengthening" "weakening" "None")
 
