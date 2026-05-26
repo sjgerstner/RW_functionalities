@@ -28,10 +28,15 @@ The other files contain other small experiments that we did not include in the p
 First, create your environment and install requirements:
 
 ```[bash]
-conda create -n wcos --file environment.yml
+conda env create -n wcos --file environment.yml
 conda activate wcos
-git submodule init --recursive
-pip install -e TransformerLens
+git submodule update --init --recursive
+pip install -e .
+
+#if you want to do attribution patching experiments (not reported in the paper):
+pip install -e EAP-IG
+
+pip install -e TransformerLens #ignore version conflicts
 ```
 
 You can ignore the version conflicts.
