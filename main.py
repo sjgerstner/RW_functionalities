@@ -231,6 +231,12 @@ if __name__=="__main__":
         filtered_dict = {
             key:value for key,value in model_to_medians_dict.items() if key not in tiny_models
         }
-        fig, ax = plotting.plot_all_medians(filtered_dict)
+        fig, ax = plotting.plot_all_medians(
+            filtered_dict,
+            figheight=3,
+            loc='upper center',
+            bbox_to_anchor=(0.5,0.5),
+            ncol=2,
+        )
         fig. savefig(f'{args.work_dir}/results/selected_medians.pdf', bbox_inches='tight')
         plt.close()

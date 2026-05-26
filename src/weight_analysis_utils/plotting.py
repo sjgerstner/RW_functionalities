@@ -371,12 +371,19 @@ def plot_boxplots(data:dict[str,torch.Tensor], model_name:str, layer_list:list[i
     fig.suptitle(model_name, fontsize=10)
     return fig, axs
 
-def plot_all_medians(model_to_medians_dict):
+def plot_all_medians(
+        model_to_medians_dict,
+        figwidth=6.75,
+        figheight=2,
+        bbox_to_anchor=(1,1),
+        loc='upper_left',
+        **legend_kwargs,
+    ):
     """make one plot with the median cos(w_in,w_out) similarities across layers of all models"""
     line_styles = ['solid', 'dotted', 'dashed', 'dashdot']
     fig, ax = plt.subplots()
-    fig.set_figwidth(6.75)
-    fig.set_figheight(2)
+    fig.set_figwidth(figwidth)
+    fig.set_figheight(figheight)
     ax.set_xlim(0.,1.)
     ax.set_ylim(-1.,1.)
     ax.axhline(color='grey')
@@ -387,8 +394,9 @@ def plot_all_medians(model_to_medians_dict):
         lines = ax.plot(x, value, label=key)
         lines[0].set_linestyle(line_styles[(i//10)])
     ax.legend(
-        bbox_to_anchor=(1,1),
-        loc='upper left',
+        bbox_to_anchor=bbox_to_anchor,
+        loc=loc,
+        **legend_kwargs,
     )
     return fig, ax
 
