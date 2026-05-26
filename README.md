@@ -16,7 +16,7 @@ We plan to publish data / results separately.
     * main code in ```attributes/```
     * ```wiki/```: code for producing the Wikipedia data used for subject-attribute mappings
   * other metrics (entropy etc.), incl. conditional ablations: The bash script ```entropy_interventions_all.sh``` runs all the edited models. It calls the code in ```entropy/```.
-  * `*.ipynb` and `simple_eap.py` and the submodule ```EAP-IG/```: Analysis of a case of entropy reduction (section 6.3). Was not cleaned up for publication, results are only partially reported in the paper.
+  * `omicron*.ipynb` and `simple_eap.py` and the submodule ```EAP-IG/```: Analysis of a case of entropy reduction (section 6.3). Was not cleaned up for publication, results are only partially reported in the paper.
 * Activation frequencies (section 7): code in ```freqs.py```.
 
 The other files contain other small experiments that we did not include in the paper, e.g. model generations when ablating a given class of neurons.
