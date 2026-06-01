@@ -2,7 +2,7 @@ Bootstrap: docker
 From: dockerhub-mirror.rrze.uni-erlangen.de/condaforge/miniforge3:latest
 
 %files
-    environment.yaml /
+    environment.yml /
     src /
     pyproject.toml /
     TransformerLens /
@@ -16,7 +16,7 @@ From: dockerhub-mirror.rrze.uni-erlangen.de/condaforge/miniforge3:latest
     conda env create --file /environment.yml -p /opt/conda/envs/$ENV_NAME
     conda activate $ENV_NAME
     pip install .
-    pip install TransformerLens
+    pip install ./TransformerLens
     conda deactivate
     conda clean --all
 

@@ -27,6 +27,8 @@ The other files contain other small experiments that we did not include in the p
 
 First, create your environment and install requirements:
 
+Variant 1, plain conda:
+
 ```[bash]
 conda env create -n wcos --file environment.yml
 conda activate wcos
@@ -34,12 +36,16 @@ git submodule update --init --recursive
 pip install -e .
 
 #if you want to do attribution patching experiments (not reported in the paper):
-pip install -e EAP-IG
+pip install -e ./EAP-IG
 
-pip install -e TransformerLens #ignore version conflicts
+pip install -e ./TransformerLens
 ```
 
-You can ignore the version conflicts.
+Variant 2, with apptainer:
+```[bash]
+apptainer build weakening.sif weakening.def
+#then run everything out of the weakening.sif container
+```
 
 ### Section 5 (IO functionalities by layer)
 

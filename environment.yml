@@ -176,6 +176,7 @@ dependencies:
   - pcre2=10.42=hebb0a14_1
   - pexpect=4.9.0=py312h06a4308_0
   - pillow=11.3.0=py312hb1c3d2d_0
+  - pip=26.1.2
   - pixman=0.40.0=h7f8727e_1
   - poppler=24.09.0=h696634e_4
   - poppler-data=0.4.12=h06a4308_0
@@ -323,7 +324,6 @@ dependencies:
       - nvidia-nvjitlink-cu12==12.8.93
       - nvidia-nvtx-cu12==12.8.90
       - pandas==2.3.1
-      - pip==26.0.1
       - pip-autoremove==0.10.0
       - platformdirs==4.3.8
       - propcache==0.3.2
