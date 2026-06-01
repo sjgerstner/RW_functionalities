@@ -1,0 +1,24 @@
+Bootstrap: docker
+From: dockerhub-mirror.rrze.uni-erlangen.de/condaforge/miniforge3:latest
+
+%files
+    environment.yaml /
+    src /
+    pyproject.toml /
+    TransformerLens /
+
+%post
+    export CONDA_OVERRIDE_CUDA=12.8
+    ENV_NAME="wcos"
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> $APPTAINER_ENVIRONMENT
+    echo "conda activate $ENV_NAME" >> $APPTAINER_ENVIRONMENT
+    . /opt/conda/etc/profile.d/conda.sh
+    conda env create --file /environment.yml -p /opt/conda/envs/$ENV_NAME
+    conda activate $ENV_NAME
+    pip install .
+    pip install TransformerLens
+    conda deactivate
+    conda clean --all
+
+%runscript
+    exec "$@"
