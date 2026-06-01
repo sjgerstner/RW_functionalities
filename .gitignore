@@ -1,6 +1,7 @@
 # *.ipynb
 # update.py
 *.bz2
+*.sif
 wiki_data/retriever
 wiki_data/*.txt
 knowns/known_1000.json
