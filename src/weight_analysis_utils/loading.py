@@ -6,21 +6,26 @@ from torch import load
 from torch.cuda import empty_cache
 
 import einops
-from transformer_lens import HookedTransformer, HookedEncoderDecoder
-from transformer_lens.loading_from_pretrained import OLMO_CHECKPOINTS_1B, OLMO_CHECKPOINTS_7B
-
-MODEL_TO_CHECKPOINTS = {
-    'allenai/OLMo-1B-hf': OLMO_CHECKPOINTS_1B,
-    'allenai/OLMo-7B-0424-hf': OLMO_CHECKPOINTS_7B,
-}
+from transformer_lens import TransformerBridge
 
 def load_model(
+    model_name: str,
+    processing_kwargs: dict[str,bool]|None=None,
+    **load_kwargs,
+):
+    model = TransformerBridge.boot_transformers(model_name, **load_kwargs)
+    if processing_kwargs is not None:
+        model.enable_compatibility_mode(**processing_kwargs)
+    return model
+
+def load_model_legacy(
     model_name,
     processing=True,
     **kwargs,
 ):
+    from transformer_lens import HookedTransformer, HookedEncoderDecoder
     if model_name.startswith("bert") or not processing:
-        model = HookedTransformer.from_pretrained_no_processing(#TODO change to HookedEncoder?
+        model = HookedTransformer.from_pretrained_no_processing(
             model_name, **kwargs,
         )
     elif model_name.startswith("t5"):
@@ -39,17 +44,18 @@ def load_model_data(
     refactor_glu=True, device='cuda:0',
     **kwargs
 ):
+    processing_kwargs = {}
     model_kwargs = kwargs.copy()
     model_kwargs["device"] = 'cpu'
     if not model_name.startswith("t5"):
-        model_kwargs["refactor_glu"]=refactor_glu
+        processing_kwargs["refactor_glu"]=refactor_glu
     try:
-        model = load_model(model_name, local_files_only=True, **model_kwargs)
+        model = load_model(model_name, local_files_only=True, processing_kwargs=processing_kwargs, **model_kwargs)
     except Exception as e:
         print(
             f"Need to fetch remote files for model {model_name}. Ignored the following error: {e}"
         )
-        model = load_model(model_name, local_files_only=False, **model_kwargs)
+        model = load_model(model_name, local_files_only=False, processing_kwargs=processing_kwargs, **model_kwargs)
 
     out_dict = {}
     #new shape: layer neuron model_dim
@@ -79,3 +85,10 @@ def load_data_if_exists(path):
     else:
         data={}
     return data
+
+def legacy_checkpoint_list:
+    from transformer_lens.loading_from_pretrained import OLMO_CHECKPOINTS_1B, OLMO_CHECKPOINTS_7B
+    return {
+        'allenai/OLMo-1B-hf': OLMO_CHECKPOINTS_1B,
+        'allenai/OLMo-7B-0424-hf': OLMO_CHECKPOINTS_7B,
+    }

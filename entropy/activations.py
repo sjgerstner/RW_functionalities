@@ -37,7 +37,7 @@ import numpy as np
 import pandas as pd
 from functools import partial
 from torch.utils.data import DataLoader
-from transformer_lens import HookedTransformer
+from transformer_lens import TransformerBridge
 from transformer_lens.utils import lm_cross_entropy_loss
 
 from .utils import get_model_family
@@ -356,7 +356,8 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else (
         'mps' if torch.backends.mps.is_available() else 'cpu'))
 
-    model = HookedTransformer.from_pretrained(args.model, device='cpu')
+    model = TransformerBridge.boot_transformers(args.model, device='cpu')
+    model.enable_compatibility_mode()
     model.to(device)
     model.eval()
     torch.set_grad_enabled(False)

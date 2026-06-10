@@ -3,13 +3,13 @@ from gc import collect
 from os.path import exists
 
 import torch
-from transformer_lens import HookedTransformer
+from transformer_lens import TransformerBridge
 
 from main import MODEL_LIST
 
 def check_weight_tying(model_name, **kwargs):
     """Load given model and check if it has weight tying (True) or not (False)"""
-    model = HookedTransformer.from_pretrained_no_processing(
+    model = TransformerBridge.boot_transformers(
         model_name,
         #local_files_only=True,#leads to error with mistral
         **kwargs,

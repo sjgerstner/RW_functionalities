@@ -8,7 +8,7 @@ from torch.utils.data import (
 )
 
 import datasets
-from transformer_lens import HookedTransformer
+from transformer_lens import TransformerBridge
 
 from eap import attribute
 from eap.evaluate import evaluate_graph#may be needed in the future
@@ -64,11 +64,12 @@ else:
         os.environ["PYTORCH_CUDA_ALLOC_CONF"]="expandable_segments:True"
     #model and graph
 
-    model = HookedTransformer.from_pretrained(#weight processing is needed for consistent definition of weakening neurons
+    model = TransformerBridge.boot_transformers(#weight processing is needed for consistent definition of weakening neurons
         'allenai/OLMo-7B-0424-hf',
         #refactor_glu=True,#we don't need this because EAP is implementation invariant
         device=DEVICE,
     )
+    model.enable_compatibility_mode()
     model.cfg.use_attn_result = True
     model.cfg.use_split_qkv_input = True
     model.cfg.use_hook_mlp_in = True

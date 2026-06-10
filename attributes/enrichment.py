@@ -24,7 +24,7 @@ from nltk.corpus import stopwords
 import pandas as pd
 import torch
 from tqdm import tqdm
-from transformer_lens import HookedTransformer
+from transformer_lens import TransformerBridge
 # Utilities
 from weight_analysis_utils.utils import NAME_TO_COMBO
 from attributes.utils import (
@@ -109,7 +109,8 @@ if __name__=="__main__":
         mean_values = None
 
     # %%
-    model = HookedTransformer.from_pretrained(args.model, device=args.device)
+    model = TransformerBridge.boot_transformers(args.model, device=args.device)
+    model.enable_compatibility_mode()
     short_model_name = args.model.split('/')[-1]
     knowns_df = pd.read_json(f'{args.data_dir}/knowns/known_{short_model_name}.json')
 

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pandas.io.formats.style import Styler
 import torch
-from transformer_lens import HookedTransformer
+from transformer_lens import TransformerBridge
 
 import neuron_choice
 from src.weight_analysis_utils.plotting import SHORT_TO_LONG, _short_to_long, aligned_histograms, freq_sim_scatter, plot_any_vs_any
@@ -17,7 +17,8 @@ def load_wout_norms(model_name:str)->torch.Tensor:
     if os.path.exists(path):
         return torch.load(path)
     #load model, refactor_glu doesn't change anything
-    model = HookedTransformer.from_pretrained(model_name, refactor_glu=False)
+    model = TransformerBridge.boot_transformers(model_name)
+    model.enable_compatibility_mode(refactor_glu=False)
     norm_wout = torch.linalg.vector_norm(model.W_out, dim=-1)
     del model
     torch.cuda.empty_cache()

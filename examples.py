@@ -5,7 +5,7 @@ import os
 
 import torch
 import datasets
-from transformer_lens import HookedTransformer, ActivationCache
+from transformer_lens import HookedTransformer, ActivationCache, TransformerBridge
 
 from entropy.compare import unflattened_data
 from ablation_utils.utils import make_hooks
@@ -89,7 +89,7 @@ def list_ablation_hooks(args:Namespace, neuron_list:list[tuple]):
         ))
     return hooks
 
-def run_ablated_and_cache(args:Namespace, model:HookedTransformer, input_ids:torch.Tensor, neuron_list:list[tuple]):
+def run_ablated_and_cache(args:Namespace, model:HookedTransformer|TransformerBridge, input_ids:torch.Tensor, neuron_list:list[tuple]):
     #cache_ablated = {}
     hooks = list_ablation_hooks(args, neuron_list)
     # for layer in range(model.cfg.n_layers):
@@ -104,7 +104,7 @@ def run_ablated_and_cache(args:Namespace, model:HookedTransformer, input_ids:tor
         logits_ablated, cache_ablated = model.run_with_cache(input_ids)
     return logits_ablated, cache_ablated
 
-def inspect_logit_diff(model:HookedTransformer, logits_clean:torch.Tensor, logits_ablated:torch.Tensor, pos):
+def inspect_logit_diff(model:HookedTransformer|TransformerBridge, logits_clean:torch.Tensor, logits_ablated:torch.Tensor, pos):
 
     logit_diff = logits_clean - logits_ablated
 
@@ -122,7 +122,7 @@ def inspect_logit_diff(model:HookedTransformer, logits_clean:torch.Tensor, logit
     results.append(dumps([model.to_single_str_token(t.item()) for t in bottom.indices[0]]))
     return "\n".join(results)
 
-def analyze_hidden_states(model:HookedTransformer, cache:ActivationCache|dict[str,torch.Tensor]):
+def analyze_hidden_states(model:HookedTransformer|TransformerBridge, cache:ActivationCache|dict[str,torch.Tensor]):
     results = []
     for layer in range(model.cfg.n_layers):
         for sublayer in ['mid', 'post']:
@@ -138,7 +138,7 @@ def analyze_hidden_states(model:HookedTransformer, cache:ActivationCache|dict[st
 
 def show_single_text(
     args:Namespace,
-    model:HookedTransformer,
+    model:HookedTransformer|TransformerBridge,
     input_ids:torch.Tensor,
     pos:int,
     neuron_list:list,
@@ -209,7 +209,7 @@ def show_single_text(
     return result_str, None, None
 
 def show_texts(
-    model:HookedTransformer,
+    model:HookedTransformer|TransformerBridge,
     text_dataset,
     output_path=None,
     **kwargs
@@ -238,7 +238,7 @@ def show_texts(
 
 def inspect_generations(
     args:Namespace,
-    model:HookedTransformer,
+    model:HookedTransformer|TransformerBridge,
     save_path:str|os.PathLike,
     mean_values,
     **generate_kwargs
@@ -262,9 +262,11 @@ def inspect_generations(
 
 #%%
 def main(list_of_kwargs_dicts:list[dict]=[]):
-    model = HookedTransformer.from_pretrained(
+    model = TransformerBridge.boot_transformers(
         'allenai/OLMo-7B-0424-hf',
-        #refactor_glu=True TODO do we need this?
+        )
+    model.enable_compatibility_mode(
+        #refactor_glu=True,#TODO do we need this?
     )
     text_dataset = datasets.load_from_disk('neuroscope/datasets/dolma-small')
     for kwargs in list_of_kwargs_dicts:

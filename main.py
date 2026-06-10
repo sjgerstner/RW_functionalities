@@ -212,11 +212,12 @@ if __name__=="__main__":
                 model_to_medians_dict[model_name] = utils.torch_quantile(data["linout"], q=.5, dim=1)
             del data
         else:
+            model_to_checkpoints = loading.legacy_checkpoint_list()
             for checkpoint_index in args.checkpoints:
                 data = analysis(
                     args, model_name,
-                    checkpoint_value=loading.MODEL_TO_CHECKPOINTS[model_name][checkpoint_index],
-                    cache_dir='/nfs/datz/olmo_models',
+                    checkpoint_value=model_to_checkpoints[model_name][checkpoint_index],
+                    cache_dir='/nfs/datz/olmo_models',#TODO
                 )
                 del data
     if "plot_all_medians" in args.experiments:

@@ -3,7 +3,7 @@ import os
 
 import torch
 import datasets
-from transformer_lens import HookedTransformer
+from transformer_lens import TransformerBridge
 
 from weight_analysis_utils.utils import NAME_TO_COMBO
 from entropy.entropy_intervention import run_intervention_experiment
@@ -234,7 +234,8 @@ if __name__ == '__main__':
 
     #go!
     if any(not os.path.exists(p) for p in save_paths) and neuron_list is not None:
-        model = HookedTransformer.from_pretrained(args.model, device=device, refactor_glu=True)
+        model = TransformerBridge.boot_transformers(args.model, device=device)
+        model.enable_compatibility_mode(refactor_glu=True)
         #model.to(device)
         model.eval()
         torch.set_grad_enabled(False)

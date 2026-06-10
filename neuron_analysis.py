@@ -1,11 +1,11 @@
 import pandas as pd
 import torch
 
-from transformer_lens import HookedTransformer
+from transformer_lens import HookedTransformer, TransformerBridge
 
 from src.weight_analysis_utils.utils import cos
 
-def topk_df(vec, model:HookedTransformer, emb=None, k=64, nonneg=True):
+def topk_df(vec, model:HookedTransformer|TransformerBridge, emb=None, k=64, nonneg=True):
     #TODO refactor: shouldn't need whole model
     """
     model used for to_string fct and emb
@@ -25,7 +25,7 @@ def topk_df(vec, model:HookedTransformer, emb=None, k=64, nonneg=True):
     df = pd.DataFrame(values, index=str_tokens, columns=["dot product"])
     return df
 
-def neuron_analysis(model:HookedTransformer, layer, neuron, emb=None, k=10, verbose=True):
+def neuron_analysis(model:HookedTransformer|TransformerBridge, layer, neuron, emb=None, k=10, verbose=True):
     """
     emb: if None (default), unembedding matrix of model.
     Otherwise set explicit matrix of shape d_model, d_vocab.

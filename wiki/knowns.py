@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 import pandas as pd
 
-from transformer_lens import HookedTransformer
+from transformer_lens import TransformerBridge
 
 parser = ArgumentParser()
 parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
@@ -17,7 +17,8 @@ args = parser.parse_args()
 knowns_df = pd.read_json(f"{args.data_dir}/known_1000.json")
 
 # Load model
-model = HookedTransformer.from_pretrained(args.model)
+model = TransformerBridge.boot_transformers(args.model)
+model.enable_compatibility_mode()
 eos_id = model.tokenizer.eos_token_id
 
 #examples which OLMo knows

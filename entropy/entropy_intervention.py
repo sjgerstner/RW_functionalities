@@ -38,7 +38,7 @@ import argparse
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from transformers import DataCollatorWithPadding
-from transformer_lens import HookedTransformer
+from transformer_lens import TransformerBridge
 from transformer_lens.utils import lm_cross_entropy_loss
 
 from ablation_utils.utils import make_hooks
@@ -228,7 +228,8 @@ if __name__ == '__main__':
 
     device = args.device
 
-    model = HookedTransformer.from_pretrained(args.model, device='cpu')
+    model = TransformerBridge.boot_transformers(args.model, device='cpu')
+    model.enable_compatibility_mode()
     model.to(device)
     model.eval()
     torch.set_grad_enabled(False)

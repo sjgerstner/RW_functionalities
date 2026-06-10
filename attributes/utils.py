@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 import torch
 
+from transformer_lens import TransformerBridge
+
 from ablation_utils.utils import make_neuron_hooks
 
 #%%
@@ -60,11 +62,14 @@ def make_caching_hooks(n_layers, cache):
 # %%
 # inspired by the notebook,
 # extended to arbitrary neuron subsets
-def record_logitlens(args, knowns_df, model, neuron_subset=None, neuron_subset_name=None, mean_values=None):
+def record_logitlens(
+    args, knowns_df, model:TransformerBridge,
+    neuron_subset=None, neuron_subset_name=None, mean_values=None,
+    ):
     """
     Inputs:
         knowns_df: a pandas dataframe of factual recall prompts
-        model: a HookedTransformer
+        model: a HookedTransformer or TransformerBridge
         neuron_subset: a list of neurons to zero-ablate,
         represented as (layer, neuron) tuples
     Output:

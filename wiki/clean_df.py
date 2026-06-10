@@ -2,10 +2,14 @@ from argparse import ArgumentParser
 import nltk
 from nltk.corpus import stopwords
 import pandas as pd
-from transformer_lens import HookedTransformer #TODO we just need the tokeniser!
+from transformer_lens import TransformerBridge #TODO we just need the tokeniser!
 from transformers import PreTrainedTokenizerFast
 
-def clean_df(df_wiki:pd.DataFrame, model_or_tokenizer:HookedTransformer|PreTrainedTokenizerFast, stopwords0_:dict[str,str]):
+def clean_df(
+    df_wiki:pd.DataFrame,
+    model_or_tokenizer:HookedTransformer|PreTrainedTokenizerFast|TransformerBridge,
+    stopwords0_:dict[str,str]
+    ):
     """
     From a dataframe of subjects and paragraphs, do tokenisation and deduplication.
     
@@ -18,14 +22,14 @@ def clean_df(df_wiki:pd.DataFrame, model_or_tokenizer:HookedTransformer|PreTrain
         df_wiki (pd.DataFrame): The original dataframe. 2 columns and a header of column names "subject" and "paragraphs".
             Each entry should have (a) a subject (string) from the "knowns" data (knowns_df)
             and (b) paragraphs concatenated with space about the subject (a single string).
-        model (HookedTransformer): this is relevant for tokenisation.
+        model_or_tokenizer (HookedTransformer|PreTrainedTokenizerFast|TransformerBridge): this is relevant for tokenisation.
         stopwords0_ (dict[str,str]): dict of stopwords, usually the English stopwords from nltk.
         The keys are the stopwords, the values are irrelevant (legacy).
 
     Returns:
         pd.DataFrame: The cleaned dataframe (with tokenized and deduped attributes)
     """
-    if isinstance(model_or_tokenizer, HookedTransformer):
+    if isinstance(model_or_tokenizer, HookedTransformer) or isinstance(model_or_tokenizer, TransformerBridge):
         def tokenize(x:str)->list[str]:
             return list(set(model_or_tokenizer.to_str_tokens(x)))
     elif isinstance(model_or_tokenizer, PreTrainedTokenizerFast):
@@ -33,7 +37,7 @@ def clean_df(df_wiki:pd.DataFrame, model_or_tokenizer:HookedTransformer|PreTrain
             return list(set(model_or_tokenizer.batch_decode(model_or_tokenizer.encode(x))))
     else:
         raise TypeError(
-            f"model_or_tokenizer should be HookedTransformer or PreTrainedTokenizerFast, but is {type(model_or_tokenizer)}"
+            f"model_or_tokenizer should be HookedTransformer|TransformerBridge or PreTrainedTokenizerFast, but is {type(model_or_tokenizer)}"
         )
     df_wiki = df_wiki.fillna('')
     # Tokenize, remove duplicate tokens, stopwords, and subwords.
@@ -54,7 +58,12 @@ def clean_df(df_wiki:pd.DataFrame, model_or_tokenizer:HookedTransformer|PreTrain
     )
     return df_wiki
 
-def clean_and_save_df(path:str, model_or_tokenizer:HookedTransformer|PreTrainedTokenizerFast, stopwords0_:dict[str,str], model_name="cleaned"):
+def clean_and_save_df(
+    path:str,
+    model_or_tokenizer:HookedTransformer|PreTrainedTokenizerFast|TransformerBridge,
+    stopwords0_:dict[str,str],
+    model_name="cleaned"
+    ):
     # This should be a path to a csv file
     # with 2 columns and a header of column names "subject" and "paragraphs".
     # Each entry should have (a) a subject (string) from the "knowns" data (knowns_df)

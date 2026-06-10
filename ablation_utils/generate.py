@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import os
 # Scientific packages
 import torch
-from transformer_lens import HookedTransformer
+from transformer_lens import HookedTransformer, TransformerBridge
 # Utilities
 from weight_analysis_utils.utils import NAME_TO_COMBO
 from neuron_choice import neuron_choice, get_n_neurons
@@ -13,7 +13,7 @@ from .utils import get_mean_values, make_neuron_hooks
 
 def generate_ablated(
     args,
-    model:HookedTransformer,
+    model:HookedTransformer|TransformerBridge,
     neuron_subset:list,
     prompt:str|torch.Tensor="<|endoftext|>",
     mean_values:torch.Tensor|None=None,
@@ -113,7 +113,8 @@ if __name__=="__main__":
     else:
         mean_values = None
 
-    model = HookedTransformer.from_pretrained(args.model)
+    model = TransformerBridge.boot_transformers(args.model)
+    model.enable_compatibility_mode()
     short_model_name = args.model.split('/')[-1]
 
     N_NEURONS, _constant = get_n_neurons(args)

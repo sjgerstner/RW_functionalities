@@ -1,7 +1,7 @@
 from torch import save
 
 from weight_analysis_utils import utils, plotting
-from weight_analysis_utils.loading import load_model_data, MODEL_TO_CHECKPOINTS, load_data_if_exists
+from weight_analysis_utils.loading import load_model_data, legacy_checkpoint_list, load_data_if_exists
 
 DEVICE = 'cuda:0'
 MODEL_NAME = "allenai/OLMo-7B-0424-hf"
@@ -11,10 +11,11 @@ print("loading other cosine data...")
 full_data = load_data_if_exists(f'{PATH}/refactored')
 
 if "W_in_start_to_end" not in full_data:
+    model_to_checkpoints = legacy_checkpoint_list()
     print("loading weights of initial model...")
     initial_data = load_model_data(
         MODEL_NAME,
-        checkpoint_value=MODEL_TO_CHECKPOINTS[MODEL_NAME][0],
+        checkpoint_value=model_to_checkpoints[MODEL_NAME][0],
         device='cpu',
         processing=False,
     )
