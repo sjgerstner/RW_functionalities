@@ -11,7 +11,10 @@ from neuron_choice import neuron_choice
 from ablation_utils.utils import get_mean_values
 
 def make_save_path(args, neuron_subset_name, intervention_type):
+    if 'WORK' not in os.environ:
+        os.environ['WORK'] = '..'
     return os.path.join(
+        os.environ['WORK'],
         args.data_dir,
         args.output_dir,
         args.model,
@@ -113,9 +116,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # general arguments
-    parser.add_argument('--work_dir', default='.')
-    parser.add_argument('--wcos_dir', default='.')
-    parser.add_argument('--data_dir', default='../RW_functionalities_results')
+    # parser.add_argument('--work_dir', default='.')
+    # parser.add_argument('--wcos_dir', default='.')
+    parser.add_argument('--data_dir', default='RW_functionalities_results')
     parser.add_argument(
         '--output_dir', default='intervention_results')
     parser.add_argument(

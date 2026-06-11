@@ -13,7 +13,10 @@ from ablation_utils.generate import generate_and_save, generate_ablated
 from neuron_choice import neuron_choice
 from src.weight_analysis_utils.utils import NAME_TO_COMBO
 
-DATA_DIR = "../RW_functionalities_results/intervention_results/allenai/OLMo-7B-0424-hf/dolma-small"
+if "WORK" not in os.environ:
+    os.environ["WORK"]='..'
+DATA_DIR_SHORT = os.environ["WORK"] + "/RW_functionalities_results"
+DATA_DIR = DATA_DIR + "/intervention_results/allenai/OLMo-7B-0424-hf/dolma-small"
 
 def store_activation_hook(activation, hook, cache_dict):
     cache_dict[hook.name] = activation.clone()
@@ -63,8 +66,7 @@ def find_texts(
 
 def create_args(**kwargs):
     return Namespace(
-        work_dir='.', wcos_dir='.',#TODO do we need these two?
-        data_dir="../RW_functionalities_results",
+        data_dir=DATA_DIR_SHORT,
         model='allenai/OLMo-7B-0424-hf',
         #gate='-', post='+',
         activation_location='mlp.hook_post',

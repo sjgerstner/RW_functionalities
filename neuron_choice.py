@@ -109,10 +109,10 @@ def random_baseline(neuron_list, data_categories, category_key):
         baseline_list.extend([(layer,neuron) for neuron in baseline_sublist])
     return baseline_list
 
-def get_n_neurons(args):
+def get_n_neurons(args, data_dir):
     if args.by_freq:
         n_neurons = int(args.n_neurons)
-        freq_data = pd.read_pickle(f'{args.work_dir}/{args.wcos_dir}/plots/freq/{args.by_freq}_means.pickle')
+        freq_data = pd.read_pickle(f'{data_dir}/plots/freq/{args.by_freq}_means.pickle')
         constant_freq = freq_data.loc[args.constant_class]["true"]
         constant = constant_freq * n_neurons
         return n_neurons, constant

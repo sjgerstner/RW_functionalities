@@ -29,14 +29,17 @@ palette = palette_[2:5] + palette_[7:]
 #dashes = [(5,0), (5,5), (2,5)] #solid, dashed, dotted
 
 parser = ArgumentParser()
-# parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
-# parser.add_argument('--topk', default=50)
 parser.add_argument('--intervention_type', default='zero_ablation')
-# parser.add_argument('--activation_location', default='mlp.hook_pre')
-parser.add_argument('--work_dir', default='../RW_functionalities_results')
+parser.add_argument(
+    '--work_dir',
+    default=None,#'../RW_functionalities_results',
+)
 args = parser.parse_args()
 
-OUT_DIR = f'{args.work_dir}/se'
+if "WORK" not in os.environ:
+    os.environ["WORK"] = '..'
+DATA_DIR = args.work_dir if args.work_dir is not None else os.environ["WORK"]+'/RW_functionalities_results'
+OUT_DIR = f'{DATA_DIR}/se'
 DF_PATH = f'{OUT_DIR}/logitlens.pickle'
 tmp = pd.read_pickle(DF_PATH)
 
@@ -49,7 +52,7 @@ all_subset_names = tmp.neuron_subset_name.unique()
 for name in all_subset_names:
     if name=='clean' or '_baseline' in name:
         continue
-    plot_dir = f'{args.work_dir}/plots/ablations/{name}'
+    plot_dir = f'{DATA_DIR}/plots/ablations/{name}'
     fig_path = f'{plot_dir}/attributes_{args.intervention_type}.pdf'
     if os.path.exists(fig_path):
         continue

@@ -49,7 +49,9 @@ args = parser.parse_args()
 
 POSITIONAL = args.positional# or args.test
 SUBNODES = args.subnodes or args.test
-GRAPH_FILE = f"../RW_functionalities_results/full{"_positional" if POSITIONAL else ""}_graph{"_with_subnodes" if SUBNODES else ""}"
+if "WORK" not in os.environ:
+    os.environ["WORK"] = '..'
+GRAPH_FILE = f"{os.environ["WORK"]}/RW_functionalities_results/full{"_positional" if POSITIONAL else ""}_graph{"_with_subnodes" if SUBNODES else ""}"
 
 if os.path.exists(GRAPH_FILE+'.pt') and not args.force_recompute:
     print("loading previously computed graph")
@@ -119,7 +121,7 @@ else:
     )
 
     if SUBNODES:
-        subnodes_df = graph.subnodes_to_pandas('../RW_functionalities_results/subnodes.csv')
+        subnodes_df = graph.subnodes_to_pandas(os.environ["WORK"] + '/RW_functionalities_results/subnodes.csv')
         subnodes_df = subnodes_df.sort_values("score", ascending=False)
         print(subnodes_df.head(40))
 

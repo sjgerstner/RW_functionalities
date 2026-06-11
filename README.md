@@ -85,17 +85,19 @@ Finally, for the case study of entropy reduction, see the ipynb files (they are 
 
 In this section we explain how to reproduce the data
 that we then use for the ablation experiment on attributes rate.
-You can skip this because we provide the resulting data.
+You can skip this because we plan to provide the resulting data.
+
+The following commands assume you want to store the data in subdirectories of the parent directory of this repo.
 
 Get the online datasets:
 
 ```[bash]
 cd ../RW_functionalities_results/knowns
 wget https://rome.baulab.info/data/dsets/known_1000.json
-cd ../wiki_data
+cd ../../wiki_data
 wget https://archive.org/download/enwiki-20211020/enwiki-20211020-pages-articles-multistream-index.txt.bz2
 wget https://archive.org/download/enwiki-20211020/enwiki-20211020-pages-articles-multistream.xml.bz2
-cd ../../RW_functionalities #back to the code repo
+cd ../RW_functionalities #back to the code repo
 ```
 
 Filter ```known_1000``` to the items known by OLMo-7B-0424 (the model of interest):

@@ -11,7 +11,9 @@ SIGN_COMBOS = ["gate+_in+", "gate+_in-", "gate-_in+", "gate-_in-"]
 
 parser = ArgumentParser()
 #parser.add_argument('--work_dir', default='.')
-parser.add_argument('--data_dir', default='../RW_functionalities_results')
+parser.add_argument('--data_dir',
+    default=None,
+)
 parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424')
 # parser.add_argument(
 #     '--wcos_dir',
@@ -26,7 +28,14 @@ parser.add_argument('--subexperiments', nargs='+', default=["separate", "aggrega
 parser.add_argument('--layer_list', nargs='+', default=[0, 15, 31], type=int)
 args = parser.parse_args()
 
-PLOT_DIR = f'{args.data_dir}/plots/freq_vs_mean/{args.model}'
+if args.data_dir is None:
+    if "WORK" not in os.environ:
+        os.environ["WORK"] = '..'
+    DATA_DIR = os.environ["WORK"] + '/RW_functionalities_results'
+else:
+    DATA_DIR = args.data_dir
+
+PLOT_DIR = f'{DATA_DIR}/plots/freq_vs_mean/{args.model}'
 os.makedirs(PLOT_DIR, exist_ok=True)
 
 NCOLS=4
