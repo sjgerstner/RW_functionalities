@@ -5,7 +5,7 @@ from os.path import exists
 import torch
 from transformer_lens import TransformerBridge
 
-from main import MODEL_LIST
+from lists import MODEL_LIST
 
 def check_weight_tying(model_name, **kwargs):
     """Load given model and check if it has weight tying (True) or not (False)"""

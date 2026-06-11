@@ -7,70 +7,10 @@ import matplotlib.pyplot as plt
 
 import torch
 
+from lists import EXPERIMENT_LIST, MODEL_LIST, VANILLA_MODELS
 from weight_analysis_utils import utils, plotting, loading
 
 torch.set_grad_enabled(False)
-
-EXPERIMENT_LIST = [
-    "beta",
-    "randomness", #compute 95 percent randomness regions (95 percent of 'mismatched' weight cosines are in this region)
-    "norms", #norms of weight vectors
-    "categories", #categorize the neurons
-    "category_stats",#compute statistics of RW classes by layer
-    #"quartiles",#compute quartiles of cosine similarities (by layer)
-    "plot_fine",#create fine-grained plot
-    "plot_selected",
-    "plot_coarse",#create coarse-grained plot (categories by layer)
-    "make_table",
-    "plot_boxplots",#make boxplots of cosine similarities by layer
-    "plot_all_medians",#make one plot with the median cos(w_in,w_out) similarities (y) across layers (x) of all models (one line per model)
-    "plot_selected_medians",
-    "plot_norms",
-    "plots_cosines_vs_norms",
-    "plot_norm_in_norm_out",
-    "plot_half_coarse",
-    "half_coarse_table",
-]
-MODEL_LIST = [
-    "allenai/OLMo-7B-0424-hf",
-    "allenai/OLMo-1B-hf",
-    "gemma-2-2b",
-    "gemma-2-9b",
-    "Llama-2-7b",
-    "meta-llama/Llama-3.1-8B",
-    "meta-llama/Llama-3.2-1B",
-    "meta-llama/Llama-3.2-3B",
-    "mistral-7b",
-    "Qwen/Qwen2.5-0.5B",
-    "Qwen/Qwen2.5-7B",
-    "yi-6b",
-]
-VANILLA_MODELS = [
-    "gpt2-small",
-    "gpt2-medium",
-    "gpt2-large",
-    "gpt2-xl",
-    "distilgpt2",
-    "opt-125m",
-    "opt-1.3b",
-    "opt-6.7b",
-    "opt-13b",
-    "gpt-j-6B",
-    "pythia-14m",
-    "pythia-1b",
-    "pythia-6.9b",
-    "pythia-12b",
-    "bloom-560m",
-    "bloom-1b1",
-    "bloom-1b7",
-    "bloom-7b1",
-    "bert-base-cased",
-    "bert-large-cased",
-    "t5-small",
-    "t5-base",
-    "t5-large",
-    "othello-gpt",
-]
 
 def cosines(mlp_weights):
     """Compute weight cosines within each neuron of the given model
