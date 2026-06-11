@@ -162,7 +162,10 @@ def run_intervention_experiment(
     if not save_path:
         if not neuron_subset_name:
             neuron_subset_name = '_'.join([f'{l}.{n}' for l, n in neuron_subset])
+        if 'WORK' not in os.environ:
+            os.environ['WORK']='..'
         save_path = os.path.join(
+            os.environ['WORK'],
             args.output_dir,
             args.model,
             args.token_dataset,
@@ -222,7 +225,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--save_precision', default=16, type=int)
     parser.add_argument(
-        '--output_dir', default='../RW_functionalities_results/intervention_results')
+        '--output_dir', default='RW_functionalities_results/intervention_results')
 
     args = parser.parse_args()
 

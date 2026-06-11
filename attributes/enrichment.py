@@ -38,8 +38,8 @@ from wiki.clean_df import clean_and_save_df
 
 if __name__=="__main__":
     parser = ArgumentParser()
-    parser.add_argument('--data_dir', default='../RW_functionalities_results')
-    parser.add_argument('--wiki_dir', default='../wiki_data')
+    parser.add_argument('--data_dir', default='RW_functionalities_results')
+    parser.add_argument('--wiki_dir', default='wiki_data')
     parser.add_argument('--means_path', default='neuroscope/results/OLMo-7B-0424/summary_refactored.pt')
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     #parser.add_argument('--subject_repr_layer', default=40)
@@ -93,6 +93,9 @@ if __name__=="__main__":
     )
     args = parser.parse_args()
 
+    if "WORK" not in os.environ:
+        os.environ["WORK"] = '..'
+
     torch.set_grad_enabled(False)
     tqdm.pandas()
 
@@ -111,10 +114,10 @@ if __name__=="__main__":
     # %%
     model = HookedTransformer.from_pretrained(args.model, device=args.device)
     short_model_name = args.model.split('/')[-1]
-    knowns_df = pd.read_json(f'{args.data_dir}/knowns/known_{short_model_name}.json')
+    knowns_df = pd.read_json(f'{os.environ["WORK"]}/{args.data_dir}/knowns/known_{short_model_name}.json')
 
     # %%
-    OUT_DIR = f'{args.data_dir}/se'
+    OUT_DIR = f'{os.environ["WORK"]}/{args.data_dir}/se'
 
     # %% [markdown]
     # ## Subject enrichment
@@ -220,10 +223,10 @@ if __name__=="__main__":
     # %%
     # Processing of Wikipedia paragraphs for automatic attribute rate evaluation.
 
-    WIKI_CLEANED = f'{args.wiki_dir}/wiki_cleaned.pickle'
+    WIKI_CLEANED = f'{os.environ["WORK"]}/{args.wiki_dir}/wiki_cleaned.pickle'
     if not os.path.exists(WIKI_CLEANED):
         df_wiki = clean_and_save_df(
-            path=args.wiki_dir,
+            path=os.path.join(os.environ["WORK"], args.wiki_dir),
             model_or_tokenizer=model,
             stopwords0_=stopwords0_,
             model_name="cleaned",#TODO change this if running on several models (also in the definition of WIKI_CLEANED)

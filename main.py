@@ -110,7 +110,7 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
     and then does the analyses specified in the args"""
 
     #path
-    path = f"{args.work_dir}/results/{model_name}"
+    path = f"{DATA_DIR}/results/{model_name}"
     if args.refactor_glu:
         path += '/refactored'
     if checkpoint_value is not None:
@@ -154,7 +154,10 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--work_dir', default='../RW_functionalities_results')
+    parser.add_argument(
+        '--work_dir',
+        default=None,#'../RW_functionalities_results'
+    )
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument(
         '--refactor_glu',
@@ -194,6 +197,13 @@ if __name__=="__main__":
     )
     parser.add_argument('--median_plot_name', default='medians')
     args = parser.parse_args()
+
+    if args.work_dir is None:
+        if "WORK" not in os.environ:
+            os.environ["WORK"] = '..'
+        DATA_DIR = os.environ["WORK"] + '/RW_functionalities_results'
+    else:
+        DATA_DIR = args.work_dir
     if args.model==["all"]:
         models = MODEL_LIST + VANILLA_MODELS
     elif args.model==["vanilla"]:
@@ -221,7 +231,7 @@ if __name__=="__main__":
                 del data
     if "plot_all_medians" in args.experiments:
         fig, ax = plotting.plot_all_medians(model_to_medians_dict)
-        fig.savefig(f'{args.work_dir}/results/{args.median_plot_name}.pdf', bbox_inches='tight')
+        fig.savefig(f'{DATA_DIR}/results/{args.median_plot_name}.pdf', bbox_inches='tight')
         plt.close()
     if "plot_selected_medians" in args.experiments:
         full_width=False#TODO
@@ -241,5 +251,5 @@ if __name__=="__main__":
             fontsize=9,
             ncol=2 if full_width else 1,
         )
-        fig. savefig(f'{args.work_dir}/results/selected_medians.pdf', bbox_inches='tight')
+        fig. savefig(f'{DATA_DIR}/results/selected_medians.pdf', bbox_inches='tight')
         plt.close()

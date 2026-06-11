@@ -17,13 +17,16 @@ def nonblank_lines(file):
 
 if __name__=='__main__':
     parser = ArgumentParser()
-    parser.add_argument('--knowns_dir', default='../RW_functionalities/knowns')
-    parser.add_argument('--wiki_dir', default='../wiki_data')
-    parser.add_argument('--out_dir', default='../wiki_data')
+    parser.add_argument('--knowns_dir', default='RW_functionalities/knowns')
+    parser.add_argument('--wiki_dir', default='wiki_data')
+    parser.add_argument('--out_dir', default='wiki_data')
     args=parser.parse_args()
 
+    if 'WORK' not in os.environ:
+        os.environ['WORK']='..'
+
     #get list of subjects
-    knowns_df = pd.read_json(f'{args.knowns_dir}/known_1000.json')
+    knowns_df = pd.read_json(f'{os.environ['WORK']}/{args.knowns_dir}/known_1000.json')
     subjects = knowns_df['subject'].unique()
 
     tokenizer = bm25s.tokenization.Tokenizer()
@@ -31,26 +34,26 @@ if __name__=='__main__':
 
     #get corpus and page/section titles
     #we saved them as two txt files
-    with open(f'{args.wiki_dir}/paragraphs.txt', 'r', encoding='utf8') as f:
+    with open(f'{os.environ['WORK']}/{args.wiki_dir}/paragraphs.txt', 'r', encoding='utf8') as f:
         all_pars = nonblank_lines(f)
         print(len(all_pars), 'paragraphs')
-    with open(f'{args.wiki_dir}/titles.txt', 'r', encoding='utf8') as f:
+    with open(f'{os.environ['WORK']}/{args.wiki_dir}/titles.txt', 'r', encoding='utf8') as f:
         all_titles = nonblank_lines(f)
         print(len(all_titles), 'titles')
     assert len(all_pars)==len(all_titles)
     n_pars = len(all_titles)
     print(n_pars)
 
-    if not os.path.exists(f'{args.wiki_dir}/retriever'):
+    if not os.path.exists(f'{os.environ['WORK']}/{args.wiki_dir}/retriever'):
         retriever = bm25s.BM25(corpus=all_pars, method="lucene", backend="numba")
         print("tokenizing corpus...")
         corpus_tokens = tokenizer.tokenize(all_pars, update_vocab=False)
         corpus = (corpus_tokens, tokenizer.word_to_id)
         print("indexing...")#we only care about the tokens actually occurring in the subject
         retriever.index(corpus)
-        retriever.save(f'{args.wiki_dir}/retriever')
+        retriever.save(f'{os.environ['WORK']}/{args.wiki_dir}/retriever')
     else:
-        retriever = bm25s.BM25.load(f'{args.wiki_dir}/retriever', mmap=True)
+        retriever = bm25s.BM25.load(f'{os.environ['WORK']}/{args.wiki_dir}/retriever', mmap=True)
 
     # Given a subject s, first we use the BM25 algorithm
     # (Robertson et al., 1995) to retrieve 100 paragraphs
@@ -86,4 +89,4 @@ if __name__=='__main__':
     # and (b) paragraphs concatenated with space about the subject (a single string).
     df_wiki = pd.DataFrame({'subject':subjects, 'paragraphs':selected_paragraphs})
 
-    df_wiki.to_csv(f'{args.out_dir}/wiki.csv')
+    df_wiki.to_csv(f'{os.environ['WORK']}/{args.out_dir}/wiki.csv')

@@ -1,3 +1,5 @@
+import os
+
 from torch import save
 
 from weight_analysis_utils import utils, plotting
@@ -5,7 +7,10 @@ from weight_analysis_utils.loading import load_model_data, MODEL_TO_CHECKPOINTS,
 
 DEVICE = 'cuda:0'
 MODEL_NAME = "allenai/OLMo-7B-0424-hf"
-PATH = f"../RW_functionalities_results/results/{MODEL_NAME}"
+
+if "WORK" not in os.environ:
+    os.environ["WORK"]='..'
+PATH = f"{os.environ["WORK"]}/RW_functionalities_results/results/{MODEL_NAME}"
 
 print("loading other cosine data...")
 full_data = load_data_if_exists(f'{PATH}/refactored')

@@ -65,7 +65,8 @@ def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_
 
 def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation', **kwargs):
     absrel = '-' #'/' if metric=='scale' else '-'
-    data_path = f'{args.data_dir}/intervention_results/{args.model}/{args.dataset}'
+    data_dir = args.data_dir if args.data_dir is not None else os.environ["WORK"]+'/RW_functionalities_results'
+    data_path = f'{data_dir}/intervention_results/{args.model}/{args.dataset}'
     print('computing data...')
     diffs = {}
     baseline_names=[]
@@ -88,7 +89,7 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
     list_data = list(diffs.values())
     #subtitles = list(chain.from_iterable((name, name+'_baseline') for name in neuron_subset_names))
     subtitles = list(k.replace('_', ' ', 1) for k in diffs)
-    experiment_dir = f'{args.plot_dir}/{args.experiment_name}'
+    experiment_dir = f'{data_dir}/{args.plot_dir}/{args.experiment_name}'
     if not os.path.exists(experiment_dir):
         os.makedirs(experiment_dir, exist_ok=True)
     if args.log:
@@ -107,8 +108,10 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
 #%%
 if __name__=='__main__':
     parser = ArgumentParser()
-    parser.add_argument('--data_dir', default='../RW_functionalities_results')
-    parser.add_argument('--plot_dir', default='../RW_functionalities_results/plots/ablations')
+    parser.add_argument('--data_dir',
+        default=None,#'../RW_functionalities_results',
+    )
+    parser.add_argument('--plot_dir', default='plots/ablations')
     parser.add_argument('--experiment_name', type=str)
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument('--dataset', default='dolma-small')
@@ -129,7 +132,8 @@ if __name__=='__main__':
     )
     parser.add_argument('--neurons', nargs='+', default=['weakening'])
     args = parser.parse_args()
-
+    if "WORK" not in os.environ:
+        os.environ["WORK"]='..'
     if args.metric=='all':
         for metric in ['entropy', 'loss', 'rank', 'scale']:
             print(metric)

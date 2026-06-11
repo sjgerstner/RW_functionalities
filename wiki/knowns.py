@@ -9,12 +9,16 @@ from transformer_lens import HookedTransformer
 
 parser = ArgumentParser()
 parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
-parser.add_argument('--data_dir', default='../RW_functionalities_results/knowns')
+parser.add_argument('--data_dir', default='RW_functionalities_results/knowns')
 args = parser.parse_args()
+
+if 'WORK' not in os.environ:
+    os.environ['WORK']='..'
+DATA_DIR = os.path.join(os.environ['WORK'], args.data_dir)
 
 # Get CounterFact data for GPT2-xl, from the ROME repository.
 #wget.download("https://rome.baulab.info/data/dsets/known_1000.json")
-knowns_df = pd.read_json(f"{args.data_dir}/known_1000.json")
+knowns_df = pd.read_json(f"{DATA_DIR}/known_1000.json")
 
 # Load model
 model = HookedTransformer.from_pretrained(args.model)
@@ -107,4 +111,4 @@ for index, row in tqdm(knowns_df.iterrows()):
 
 print('number of failures:', count_failures)
 
-knowns_df.to_json(f'{args.data_dir}/known_{args.model.split('/')[-1]}.json', orient='records')
+knowns_df.to_json(f'{DATA_DIR}/known_{args.model.split('/')[-1]}.json', orient='records')

@@ -40,9 +40,9 @@ def generate_and_save(save_path, file_name, **kwargs):
 
 def _get_args():
     parser = ArgumentParser()
-    # parser.add_argument('--work_dir', default='.')
-    # parser.add_argument('--wcos_dir', default='.')
-    parser.add_argument('--data_dir', default='../RW_functionalities_results')
+    parser.add_argument('--data_dir',
+        default=None,#'../RW_functionalities_results'
+    )
     parser.add_argument('--means_path', default='neuroscope/results/7B_new/summary_refactored.pt')
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument(
@@ -98,13 +98,16 @@ def _get_args():
 
 if __name__=="__main__":
     args = _get_args()
+    if "WORK" not in os.environ:
+        os.environ["WORK"] = '..'
+    DATA_DIR = args.data_dir if args.data_dir is not None else os.path.join(os.environ["WORK"], "RW_functionalities_results")
+
     generate_kwargs = {
         "max_new_tokens": args.max_new_tokens,
         "do_sample": args.do_sample,#TODO set a seed for this case!
     }
     save_path = os.path.join(
-        "..",
-        "RW_functionalities_results"
+        DATA_DIR,
         "generations",
         args.model,
     )
@@ -116,7 +119,11 @@ if __name__=="__main__":
     model = HookedTransformer.from_pretrained(args.model)
     short_model_name = args.model.split('/')[-1]
 
-    N_NEURONS, _constant = get_n_neurons(args)
+    
+    N_NEURONS, _constant = get_n_neurons(
+        args,
+        data_dir=DATA_DIR,
+    )
     temperature_str = "full" if args.do_sample else "greedy"
 
     #baseline (no ablations)
