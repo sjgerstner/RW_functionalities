@@ -3,7 +3,7 @@ from gc import collect
 from os.path import exists
 
 import torch
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 
 from lists import MODEL_LIST
 

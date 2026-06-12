@@ -1,7 +1,8 @@
 import pandas as pd
 import torch
 
-from transformer_lens import HookedTransformer, TransformerBridge
+from transformer_lens import HookedTransformer
+from transformer_lens.model_bridge import TransformerBridge
 
 from src.weight_analysis_utils.utils import cos
 

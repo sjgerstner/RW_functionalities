@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pandas.io.formats.style import Styler
 import torch
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 
 import neuron_choice
 from src.weight_analysis_utils.plotting import SHORT_TO_LONG, _short_to_long, aligned_histograms, freq_sim_scatter, plot_any_vs_any

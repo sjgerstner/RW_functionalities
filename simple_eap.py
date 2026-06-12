@@ -8,7 +8,7 @@ from torch.utils.data import (
 )
 
 import datasets
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 
 from eap import attribute
 from eap.evaluate import evaluate_graph#may be needed in the future

@@ -2,8 +2,8 @@ import os
 
 from torch import save
 
-from weight_analysis_utils import utils, plotting
-from weight_analysis_utils.loading import load_model_data, legacy_checkpoint_list, load_data_if_exists
+from src.weight_analysis_utils import utils, plotting
+from src.weight_analysis_utils.loading import load_model_data, legacy_checkpoint_list, load_data_if_exists
 
 DEVICE = 'cuda:0'
 MODEL_NAME = "allenai/OLMo-7B-0424-hf"
