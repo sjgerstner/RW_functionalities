@@ -792,7 +792,8 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         fig, _ax = plot_boxplots(data, model_name)
         fig.savefig(f"{path}/boxplot.pdf", bbox_inches='tight')
         plt.close()
-    if any(s in experiments for s in ("plot_half_coarse", "half_coarse_table")):
+    if any(s in experiments for s in ("plot_half_coarse", "half_coarse_table")) and gateout not in data:
+        #this code part is only for non-glu models
         half_coarse = half_coarse_categories(data)
         if "plot_half_coarse" in experiments:
             fig, _ax = my_survey(
