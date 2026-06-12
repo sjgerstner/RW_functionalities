@@ -24,7 +24,7 @@ from nltk.corpus import stopwords
 import pandas as pd
 import torch
 from tqdm import tqdm
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 # Utilities
 from src.weight_analysis_utils.utils import NAME_TO_COMBO
 from attributes.utils import (

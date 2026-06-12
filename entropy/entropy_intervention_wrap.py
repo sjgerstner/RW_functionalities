@@ -3,7 +3,7 @@ import os
 
 import torch
 import datasets
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 
 from src.weight_analysis_utils.utils import NAME_TO_COMBO
 from entropy.entropy_intervention import run_intervention_experiment

@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import nltk
 from nltk.corpus import stopwords
 import pandas as pd
-from transformer_lens import TransformerBridge #TODO we just need the tokeniser!
+from transformer_lens.model_bridge import TransformerBridge #TODO we just need the tokeniser!
 from transformers import PreTrainedTokenizerFast
 
 def clean_df(

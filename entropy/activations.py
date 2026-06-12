@@ -37,7 +37,7 @@ import numpy as np
 import pandas as pd
 from functools import partial
 from torch.utils.data import DataLoader
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 from transformer_lens.utils import lm_cross_entropy_loss
 
 from .utils import get_model_family
