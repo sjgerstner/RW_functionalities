@@ -26,7 +26,7 @@ import torch
 from tqdm import tqdm
 from transformer_lens import TransformerBridge
 # Utilities
-from weight_analysis_utils.utils import NAME_TO_COMBO
+from src.weight_analysis_utils.utils import NAME_TO_COMBO
 from attributes.utils import (
     find_token_range,
     record_logitlens,

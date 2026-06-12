@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import torch
 
 from lists import EXPERIMENT_LIST, MODEL_LIST, VANILLA_MODELS
-from weight_analysis_utils import utils, plotting, loading
+from src.weight_analysis_utils import utils, plotting, loading
 
 torch.set_grad_enabled(False)
 
