@@ -68,7 +68,7 @@ def load_model_data(
     out_dict["W_in"] = model.W_in.detach().to(device)
     out_dict["W_out"] = model.W_out.detach().to(device)
     #ensure shape: layer neuron model_dim
-    for key,value in out_dict:
+    for key,value in out_dict.items():
         if value.shape[1]==model.cfg.d_model:
             out_dict[key] = einops.rearrange(value, 'l d n -> l n d')
             assert out_dict[key].shape[2]==model.cfg.d_model, f"tensor {key} has a weird shape: {value.shape}"
