@@ -152,12 +152,15 @@ def my_survey(
     n_layers = results[key_list[0]].numel()
     original_results_device = results[key_list[0]].device
     labels = range(n_layers)#[0,...,31] if 32 layers
-    names_and_colors, combo_to_name, _new_results = get_names(results)
+    names_and_colors, combo_to_name, new_results = get_names(results)
+    # print(names_and_colors)
+    # print(combo_to_name)
+    # print(new_results)
     data = np.array(torch.stack(
         [
-            results[key] if key in results
+            new_results[key] if key in new_results
             else torch.zeros(n_layers, device=original_results_device)
-            for key in key_list
+            for key in names_and_colors.keys()
         ],
         dim=-1
     ).cpu())
@@ -818,12 +821,19 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
     if any(s in experiments for s in ("plot_half_coarse", "half_coarse_table")):
         half_coarse = half_coarse_categories(data)
         if "plot_half_coarse" in experiments:
-            fig, _ax = my_survey(
-                half_coarse, model_name,
-                text_threshold=20000,#so large that there will be no text
-            )
-            fig.savefig(f"{path}/half_coarse.pdf", bbox_inches='tight')
-            plt.close()
+            try:
+                fig, _ax = my_survey(
+                    half_coarse, #model_name,
+                    text_threshold=-1,
+                    figwidth=2, figheight=2.5,
+                    bbox_to_anchor=(1,0.5), loc='center left',
+                    legend_fontsize=9,
+                )
+                fig.savefig(f"{path}/half_coarse.pdf", bbox_inches='tight')
+                plt.close()
+            except IndexError as e:
+                print(f"failed to make half coarse plot for model {model_name} because of index error:", e)
+                print(half_coarse.keys())
         if "half_coarse_table" in experiments:
             styler = make_table(half_coarse)
             styler.to_latex(
