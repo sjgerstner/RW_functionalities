@@ -377,6 +377,7 @@ def plot_all_medians(
         figheight=2,
         bbox_to_anchor=(1,1),
         loc='upper_left',
+        fontsize=plt.rcParams['font.size'],
         **legend_kwargs,
     ):
     """make one plot with the median cos(w_in,w_out) similarities across layers of all models"""
@@ -387,8 +388,8 @@ def plot_all_medians(
     ax.set_xlim(0.,1.)
     ax.set_ylim(-1.,1.)
     ax.axhline(color='grey')
-    ax.set_xlabel('Layer (relative to network depth)')
-    ax.set_ylabel('median $cos(w_{in},w_{out})$')
+    ax.set_xlabel('Layer (relative to network depth)', fontsize=fontsize)
+    ax.set_ylabel('median $cos(w_{in},w_{out})$', fontsize=fontsize)
     for i, (key,value) in enumerate(model_to_medians_dict.items()):
         x = np.linspace(0,1,value.size(dim=0))
         lines = ax.plot(x, value, label=key)
@@ -396,6 +397,7 @@ def plot_all_medians(
     ax.legend(
         bbox_to_anchor=bbox_to_anchor,
         loc=loc,
+        fontsize=fontsize,#plt.rcParams['font.size'],
         **legend_kwargs,
     )
     return fig, ax
