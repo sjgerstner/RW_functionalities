@@ -127,7 +127,8 @@ def get_names(results:dict):
 def my_survey(
     results:dict, model_name:str|None=None, white_text=True, text_threshold=-1,
     figwidth=3.0, figheight=3.0,
-    bbox_to_anchor=(1,1), loc='upper left', legend_fontsize=plt.rcParams['font.size'],
+    bbox_to_anchor=(1,1), loc='upper left',
+    **legend_kwargs,
 ):
     """
     Parameters
@@ -193,7 +194,7 @@ def my_survey(
         #ncols=len(category_names),
         bbox_to_anchor=bbox_to_anchor,
         loc=loc,
-        fontsize=legend_fontsize,
+        **legend_kwargs,
         )
     if model_name is not None:
         ax.set_title(model_name)
@@ -800,7 +801,7 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
             data['category_stats'], #model_name,
             figwidth=3.0, figheight=3.0,
             bbox_to_anchor=(0.5,0), loc='upper center',
-            legend_fontsize=9,
+            fontsize=9,
         )
         fig.savefig(f"{path}/coarse.pdf", bbox_inches='tight')
         plt.close()
@@ -825,9 +826,10 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
                 fig, _ax = my_survey(
                     half_coarse, #model_name,
                     text_threshold=-1,
-                    figwidth=2, figheight=2.5,
-                    bbox_to_anchor=(1,0.5), loc='center left',
-                    legend_fontsize=9,
+                    figwidth=3, figheight=3,
+                    bbox_to_anchor=(0.5,0), loc='upper center',
+                    fontsize=9,
+                    ncols=2,
                 )
                 fig.savefig(f"{path}/half_coarse.pdf", bbox_inches='tight')
                 plt.close()
