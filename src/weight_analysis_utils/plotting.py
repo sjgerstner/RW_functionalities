@@ -125,7 +125,9 @@ def get_names(results:dict):
     return names_and_colors, combo_to_name, new_results
 
 def my_survey(
-    results:dict, model_name:str|None=None, white_text=True, text_threshold=700,
+    results:dict, model_name:str|None=None, white_text=True, text_threshold=-1,
+    figwidth=3.0, figheight=3.0,
+    bbox_to_anchor=(1,1), loc='upper left', legend_fontsize=plt.rcParams['font.size'],
 ):
     """
     Parameters
@@ -136,15 +138,20 @@ def my_survey(
         (i.e. tensors of shape (layer) and dtype int)
         (typically output of utils.layerwise_count())
     model_name: str
-    category_names : list of str
-        The category labels.
-    category_colors: list of tuples of 4 floats
-        The rgba colors corresponding to the categories
+    white_text (bool): allow white text. Defaults to True.
+    text_threshold (int): minimum number of neurons to explicitly mark by a number.
+        Defaults to -1 (never write the exact numbers).
+    figwidth (float): width of figure in inches (without legend). Defaults to 3.0.
+    figheight (float): height of figure in inches (without legend). Defaults to 3.0.
+    bbox_to_anchor (tuple): this argument is passed to ax.legend(), see their documentation.
+        Defaults to (1,1): anchor legend at top right corner of the plot.
+    loc (str): this argument is passed to ax.legend(), see their documentation.
+        Defaults to 'upper left', i.e. upper left corner of legend is at the place marked by bbox_to_anchor.
     """
     key_list = list(results.keys())
     n_layers = results[key_list[0]].numel()
     original_results_device = results[key_list[0]].device
-    labels = [f'Layer {n}' for n in range(n_layers)]#[0,...,31] if 32 layers
+    labels = range(n_layers)#[0,...,31] if 32 layers
     names_and_colors, combo_to_name, _new_results = get_names(results)
     data = np.array(torch.stack(
         [
@@ -158,11 +165,13 @@ def my_survey(
     data_cum = data.cumsum(axis=1)#cumsum over categories
 
     fig, ax = plt.subplots()
-    fig.set_figwidth(6.75)
-    fig.set_figheight(6.75)
+    fig.set_figwidth(figwidth)
+    fig.set_figheight(figheight)
     ax.invert_yaxis()
+    ax.set_ylabel('Layer')
     ax.xaxis.set_visible(False)
     ax.set_xlim(0, np.sum(data, axis=1).max())
+    # ax.set_xlabel('Number of neurons') #doesn't work
 
     for i, (key, color) in enumerate(names_and_colors.items()):
         widths = data[:,i]
@@ -171,7 +180,7 @@ def my_survey(
                         #height=0.5,
                         label=combo_to_name[key], color=color,
                         edgecolor="black")
-        if any(widths>text_threshold):
+        if text_threshold>=0 and any(widths>text_threshold):
             r, g, b, _ = color
             text_color = 'black' if (r>.5 or g>.5 or not white_text) else 'white'#TODO
             ax.bar_label(rects, label_type='center', color=text_color,
@@ -179,9 +188,9 @@ def my_survey(
                          )
     ax.legend(
         #ncols=len(category_names),
-        bbox_to_anchor=(1,1),
-        loc='upper left',
-        #fontsize='xx-large'
+        bbox_to_anchor=bbox_to_anchor,
+        loc=loc,
+        fontsize=legend_fontsize,
         )
     if model_name is not None:
         ax.set_title(model_name)
@@ -377,7 +386,7 @@ def plot_all_medians(
         figheight=2,
         bbox_to_anchor=(1,1),
         loc='upper_left',
-        fontsize=plt.rcParams['font.size'],
+        #fontsize=plt.rcParams['font.size'],
         **legend_kwargs,
     ):
     """make one plot with the median cos(w_in,w_out) similarities across layers of all models"""
@@ -388,8 +397,8 @@ def plot_all_medians(
     ax.set_xlim(0.,1.)
     ax.set_ylim(-1.,1.)
     ax.axhline(color='grey')
-    ax.set_xlabel('Layer (relative to network depth)', fontsize=fontsize)
-    ax.set_ylabel('median $cos(w_{in},w_{out})$', fontsize=fontsize)
+    ax.set_xlabel('Layer (relative to network depth)')
+    ax.set_ylabel('median $cos(w_{in},w_{out})$')
     for i, (key,value) in enumerate(model_to_medians_dict.items()):
         x = np.linspace(0,1,value.size(dim=0))
         lines = ax.plot(x, value, label=key)
@@ -397,7 +406,6 @@ def plot_all_medians(
     ax.legend(
         bbox_to_anchor=bbox_to_anchor,
         loc=loc,
-        fontsize=fontsize,#plt.rcParams['font.size'],
         **legend_kwargs,
     )
     return fig, ax
@@ -785,7 +793,12 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         plt.close()
     #coarse-grained / category stats
     if "plot_coarse" in experiments:# and not os.path.exists(f"{path}/coarse.pdf"):
-        fig, _ax = my_survey(data['category_stats'], model_name)
+        fig, _ax = my_survey(
+            data['category_stats'], #model_name,
+            figwidth=3.0, figheight=3.0,
+            bbox_to_anchor=(0.5,0), loc='upper center',
+            legend_fontsize=9,
+        )
         fig.savefig(f"{path}/coarse.pdf", bbox_inches='tight')
         plt.close()
     #coarse table of category stats
