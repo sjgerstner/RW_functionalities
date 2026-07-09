@@ -5,12 +5,6 @@ names=("strengthening" "conditional strengthening" "proportional change" "condit
 signs=("+" "-")
 n_neuron_variants=("strengthening" "weakening" "None")
 
-# baseline run
-python -m entropy.entropy_intervention_wrap \
-    --batch_size 4 \
-    --device cuda:0 \
-    "$@"
-
 # Detect GPUs
 if [ -n "$CUDA_VISIBLE_DEVICES" ]; then
     IFS=',' read -ra VISIBLE_GPUS <<< "$CUDA_VISIBLE_DEVICES"
@@ -25,6 +19,19 @@ if [ "$NUM_GPUS" -eq 0 ]; then
 fi
 
 job_counter=0
+gpu_id=0
+physical_gpu="${VISIBLE_GPUS[$gpu_id]}"
+
+# baseline run
+(
+    export CUDA_VISIBLE_DEVICES="$physical_gpu"
+    python -m entropy.entropy_intervention_wrap \
+        --batch_size 4 \
+        --device cuda:0 \
+        "$@"
+) &
+((job_counter++)) || true
+
 for intervention_type in {mean_ablation,zero_ablation}; do
     for n_neurons in "${n_neuron_variants[@]}"; do
         for neuron_subset_name in "${names[@]}"; do
