@@ -8,7 +8,8 @@ n_neuron_variants=("strengthening" "weakening" "None")
 # baseline run
 python -m entropy.entropy_intervention_wrap \
     --batch_size 4 \
-    --device cuda:0
+    --device cuda:0 \
+    "$@"
 
 # Detect GPUs
 if [ -n "$CUDA_VISIBLE_DEVICES" ]; then
@@ -49,7 +50,8 @@ for intervention_type in {mean_ablation,zero_ablation}; do
                     --n_neurons $n_neurons \
                     --batch_size 4 \
                     --device cuda:0 \
-                    --intervention_type $intervention_type
+                    --intervention_type $intervention_type \
+                    "$@"
             ) &
             ((job_counter++)) || true
         done
@@ -79,7 +81,8 @@ for intervention_type in {mean_ablation,zero_ablation}; do
                     --post "${signs[$post]}" \
                     --batch_size 4 \
                     --device cuda:0 \
-                    --intervention_type $intervention_type
+                    --intervention_type $intervention_type \
+                    "$@"
             ) &
             ((job_counter++)) || true
         done
