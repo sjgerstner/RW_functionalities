@@ -125,7 +125,10 @@ def get_names(results:dict):
     return names_and_colors, combo_to_name, new_results
 
 def my_survey(
-    results:dict, model_name:str|None=None, white_text=True, text_threshold=700,
+    results:dict, model_name:str|None=None, white_text=True, text_threshold=-1,
+    figwidth=3.0, figheight=3.0,
+    bbox_to_anchor=(1,1), loc='upper left',
+    **legend_kwargs,
 ):
     """
     Parameters
@@ -136,21 +139,29 @@ def my_survey(
         (i.e. tensors of shape (layer) and dtype int)
         (typically output of utils.layerwise_count())
     model_name: str
-    category_names : list of str
-        The category labels.
-    category_colors: list of tuples of 4 floats
-        The rgba colors corresponding to the categories
+    white_text (bool): allow white text. Defaults to True.
+    text_threshold (int): minimum number of neurons to explicitly mark by a number.
+        Defaults to -1 (never write the exact numbers).
+    figwidth (float): width of figure in inches (without legend). Defaults to 3.0.
+    figheight (float): height of figure in inches (without legend). Defaults to 3.0.
+    bbox_to_anchor (tuple): this argument is passed to ax.legend(), see their documentation.
+        Defaults to (1,1): anchor legend at top right corner of the plot.
+    loc (str): this argument is passed to ax.legend(), see their documentation.
+        Defaults to 'upper left', i.e. upper left corner of legend is at the place marked by bbox_to_anchor.
     """
     key_list = list(results.keys())
     n_layers = results[key_list[0]].numel()
     original_results_device = results[key_list[0]].device
-    labels = [f'Layer {n}' for n in range(n_layers)]#[0,...,31] if 32 layers
-    names_and_colors, combo_to_name, _new_results = get_names(results)
+    labels = range(n_layers)#[0,...,31] if 32 layers
+    names_and_colors, combo_to_name, new_results = get_names(results)
+    # print(names_and_colors)
+    # print(combo_to_name)
+    # print(new_results)
     data = np.array(torch.stack(
         [
-            results[key] if key in results
+            new_results[key] if key in new_results
             else torch.zeros(n_layers, device=original_results_device)
-            for key in key_list
+            for key in names_and_colors.keys()
         ],
         dim=-1
     ).cpu())
@@ -158,11 +169,13 @@ def my_survey(
     data_cum = data.cumsum(axis=1)#cumsum over categories
 
     fig, ax = plt.subplots()
-    fig.set_figwidth(6.75)
-    fig.set_figheight(6.75)
+    fig.set_figwidth(figwidth)
+    fig.set_figheight(figheight)
     ax.invert_yaxis()
+    ax.set_ylabel('Layer')
     ax.xaxis.set_visible(False)
     ax.set_xlim(0, np.sum(data, axis=1).max())
+    # ax.set_xlabel('Number of neurons') #doesn't work
 
     for i, (key, color) in enumerate(names_and_colors.items()):
         widths = data[:,i]
@@ -171,7 +184,7 @@ def my_survey(
                         #height=0.5,
                         label=combo_to_name[key], color=color,
                         edgecolor="black")
-        if any(widths>text_threshold):
+        if text_threshold>=0 and any(widths>text_threshold):
             r, g, b, _ = color
             text_color = 'black' if (r>.5 or g>.5 or not white_text) else 'white'#TODO
             ax.bar_label(rects, label_type='center', color=text_color,
@@ -179,9 +192,9 @@ def my_survey(
                          )
     ax.legend(
         #ncols=len(category_names),
-        bbox_to_anchor=(1,1),
-        loc='upper left',
-        #fontsize='xx-large'
+        bbox_to_anchor=bbox_to_anchor,
+        loc=loc,
+        **legend_kwargs,
         )
     if model_name is not None:
         ax.set_title(model_name)
@@ -371,12 +384,20 @@ def plot_boxplots(data:dict[str,torch.Tensor], model_name:str, layer_list:list[i
     fig.suptitle(model_name, fontsize=10)
     return fig, axs
 
-def plot_all_medians(model_to_medians_dict):
+def plot_all_medians(
+        model_to_medians_dict,
+        figwidth=6.75,
+        figheight=2,
+        bbox_to_anchor=(1,1),
+        loc='upper_left',
+        #fontsize=plt.rcParams['font.size'],
+        **legend_kwargs,
+    ):
     """make one plot with the median cos(w_in,w_out) similarities across layers of all models"""
     line_styles = ['solid', 'dotted', 'dashed', 'dashdot']
     fig, ax = plt.subplots()
-    fig.set_figwidth(6.75)
-    fig.set_figheight(2)
+    fig.set_figwidth(figwidth)
+    fig.set_figheight(figheight)
     ax.set_xlim(0.,1.)
     ax.set_ylim(-1.,1.)
     ax.axhline(color='grey')
@@ -387,8 +408,9 @@ def plot_all_medians(model_to_medians_dict):
         lines = ax.plot(x, value, label=key)
         lines[0].set_linestyle(line_styles[(i//10)])
     ax.legend(
-        bbox_to_anchor=(1,1),
-        loc='upper left',
+        bbox_to_anchor=bbox_to_anchor,
+        loc=loc,
+        **legend_kwargs,
     )
     return fig, ax
 
@@ -775,7 +797,12 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         plt.close()
     #coarse-grained / category stats
     if "plot_coarse" in experiments:# and not os.path.exists(f"{path}/coarse.pdf"):
-        fig, _ax = my_survey(data['category_stats'], model_name)
+        fig, _ax = my_survey(
+            data['category_stats'], #model_name,
+            figwidth=3.0, figheight=3.0,
+            bbox_to_anchor=(0.5,0), loc='upper center',
+            fontsize=9,
+        )
         fig.savefig(f"{path}/coarse.pdf", bbox_inches='tight')
         plt.close()
     #coarse table of category stats
@@ -795,12 +822,20 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
     if any(s in experiments for s in ("plot_half_coarse", "half_coarse_table")):
         half_coarse = half_coarse_categories(data)
         if "plot_half_coarse" in experiments:
-            fig, _ax = my_survey(
-                half_coarse, model_name,
-                text_threshold=20000,#so large that there will be no text
-            )
-            fig.savefig(f"{path}/half_coarse.pdf", bbox_inches='tight')
-            plt.close()
+            try:
+                fig, _ax = my_survey(
+                    half_coarse, #model_name,
+                    text_threshold=-1,
+                    figwidth=3, figheight=3,
+                    bbox_to_anchor=(0.5,0), loc='upper center',
+                    fontsize=9,
+                    ncols=2,
+                )
+                fig.savefig(f"{path}/half_coarse.pdf", bbox_inches='tight')
+                plt.close()
+            except IndexError as e:
+                print(f"failed to make half coarse plot for model {model_name} because of index error:", e)
+                print(half_coarse.keys())
         if "half_coarse_table" in experiments:
             styler = make_table(half_coarse)
             styler.to_latex(

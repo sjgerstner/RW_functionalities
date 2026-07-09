@@ -224,6 +224,7 @@ if __name__=="__main__":
         fig.savefig(f'{args.work_dir}/results/{args.median_plot_name}.pdf', bbox_inches='tight')
         plt.close()
     if "plot_selected_medians" in args.experiments:
+        full_width=False#TODO
         tiny_models = [
             model_name for model_name in MODEL_LIST
             if "1b" in model_name.lower() or "0.5b" in model_name.lower()
@@ -231,6 +232,14 @@ if __name__=="__main__":
         filtered_dict = {
             key:value for key,value in model_to_medians_dict.items() if key not in tiny_models
         }
-        fig, ax = plotting.plot_all_medians(filtered_dict)
+        fig, ax = plotting.plot_all_medians(
+            filtered_dict,
+            figwidth=6 if full_width else 3,
+            figheight=3 if full_width else 4,
+            loc='lower left',
+            bbox_to_anchor=(0,0),
+            fontsize=9,
+            ncol=2 if full_width else 1,
+        )
         fig. savefig(f'{args.work_dir}/results/selected_medians.pdf', bbox_inches='tight')
         plt.close()
