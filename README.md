@@ -51,6 +51,7 @@ python main.py --models vanilla #for the non-GLU models
 (see the argparse part of the code for more options)
 
 ### Section 6 (Ablation experiments)
+
 #### Entropy etc
 
 Including conditional ablations.
@@ -63,6 +64,7 @@ bash entropy_interventions_all.sh
 ```
 
 To get the plots, run ```python -m entropy.compare``` with the options:
+
 * ```--experiment_name``` to define how your plot will be named
 * ```--neurons``` to define which runs (i.e. which neuron sets) you want to include in the plots.
 For example, for the plot in the main paper:
@@ -111,7 +113,6 @@ python wiki/wiki_retrieve.py
 python -m attributes.enrichment --n_neurons 243 # we also did the same with 24
 python -m attributes.plotting
 ```
-
 
 ### Section 7 (Activation frequencies)
 

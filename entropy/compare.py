@@ -115,7 +115,13 @@ if __name__=='__main__':
     parser.add_argument('--metric', default='all')
     parser.add_argument(
         '--intervention_type',
-        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation", "mean_ablation"],
+        choices=[
+            "zero_ablation",
+            "threshold_ablation",
+            "fixed_activation",
+            "relu_ablation",
+            "mean_ablation"
+        ],
         default="zero_ablation",
     )
     parser.add_argument(
@@ -123,6 +129,7 @@ if __name__=='__main__':
     )
     parser.add_argument('--neurons', nargs='+', default=['weakening'])
     args = parser.parse_args()
+
     if args.metric=='all':
         for metric in ['entropy', 'loss', 'rank', 'scale']:
             print(metric)
