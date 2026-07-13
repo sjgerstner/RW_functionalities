@@ -143,7 +143,7 @@ if __name__=='__main__':
                 )),
                 savefile=CATEGORY_PATH,
                 #suptitle=f"{SHORT_TO_LONG[args.combo]} of neurons in {args.model}",
-                xlabel=SHORT_TO_LONG[args.combo],
+                xlabel=SHORT_TO_LONG[args.combo],#TODO there's a bug here
                 ylabel="proportion of neurons",
                 ncols=2,
                 log=args.log,
@@ -191,7 +191,9 @@ if __name__=='__main__':
     #scatter plots
     if any(s in subexps for s in ["scatter_plots", "selected", "all_layers", "norms"]):
         #tensor of category by neuron
-        PATH = f"{DATA_DIR}/results/{args.model}/refactored"
+        PATH = f"{DATA_DIR}/results/{args.model}"
+        if args.refactor_glu:
+            PATH+="/refactored"
         data = torch.load(f"{PATH}/data.pt")
         # with open(f"{PATH}/data.pt", 'rb') as f:
         #     data = pickle.load(f)
