@@ -9,7 +9,7 @@ import torch
 # print(sys.path)
 # sys.path.append('/mounts/work/sgerstner/RW_functionalities/src')
 
-from weight_analysis_utils import plotting
+from src.weight_analysis_utils import plotting
 
 #TODO put plotting stuff into separate file to avoid uselessly importing plotting
 

@@ -235,6 +235,7 @@ def beta_randomness_region(d, p=0.05):
 
 def _approx(x, threshold:float|None=.5, bins:int|None=None)->Tensor|float|int:
     """If both bins and thresholds are not None, bins wins."""
+    assert isinstance(threshold, float) or threshold is None, f'argument threshold is of type {type(threshold)}'
     if bins is not None:
         ans = torch.floor(x*bins/2)*2/bins
     elif threshold is not None:
@@ -265,7 +266,7 @@ def compute_category(data, device=None, **kwargs):
     if "gateout" in data:
         approx_gateout = _approx(data["gateout"], **kwargs)
         typical = torch.where(
-            _approx(data["gatelin"], *kwargs)==approx_linout*approx_gateout, 1, 0
+            _approx(data["gatelin"], **kwargs)==approx_linout*approx_gateout, 1, 0
         )
         typical = torch.where(
             (approx_linout==0) & (approx_gateout==0), 1, typical
@@ -290,7 +291,7 @@ def is_in_category(category_tensor, category_key):
     """
     # if isinstance(category_key, str):
     #     category_key = float(category_key)
-    key_tensor = torch.tensor(category_key).to(category_tensor.device)
+    key_tensor = torch.tensor(category_key).to(category_tensor.device).to(category_tensor.dtype)
     eq = torch.isclose(category_tensor, key_tensor)
     if category_tensor.dim()==3 and category_tensor.shape[-1]==3:
         return eq.all(dim=-1)

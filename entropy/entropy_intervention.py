@@ -38,7 +38,7 @@ import argparse
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from transformers import DataCollatorWithPadding
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 from transformer_lens.utils import lm_cross_entropy_loss
 
 from ablation_utils.utils import make_hooks

@@ -2,9 +2,10 @@ from argparse import ArgumentParser
 import os
 # Scientific packages
 import torch
-from transformer_lens import HookedTransformer, TransformerBridge
+from transformer_lens import HookedTransformer
+from transformer_lens.model_bridge import TransformerBridge
 # Utilities
-from weight_analysis_utils.utils import NAME_TO_COMBO
+from src.weight_analysis_utils.utils import NAME_TO_COMBO
 from neuron_choice import neuron_choice, get_n_neurons
 from .utils import get_mean_values, make_neuron_hooks
 

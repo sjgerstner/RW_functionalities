@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 
 from ablation_utils.utils import make_neuron_hooks
 

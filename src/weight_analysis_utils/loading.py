@@ -22,7 +22,7 @@ def load_model_legacy(
     model_name,
     processing=True,
     **kwargs,
-):
+    ):
     from transformer_lens import HookedTransformer, HookedEncoderDecoder
     if model_name.startswith("bert") or not processing:
         model = HookedTransformer.from_pretrained_no_processing(
@@ -49,20 +49,29 @@ def load_model_data(
     model_kwargs["device"] = 'cpu'
     if not model_name.startswith("t5"):
         processing_kwargs["refactor_glu"]=refactor_glu
-    try:
-        model = load_model(model_name, local_files_only=True, processing_kwargs=processing_kwargs, **model_kwargs)
-    except Exception as e:
-        print(
-            f"Need to fetch remote files for model {model_name}. Ignored the following error: {e}"
-        )
-        model = load_model(model_name, local_files_only=False, processing_kwargs=processing_kwargs, **model_kwargs)
+    # try:
+    model = load_model(
+        model_name,
+        #local_files_only=True,
+        processing_kwargs=processing_kwargs,
+        **model_kwargs
+    )
+    # except Exception as e:
+    #     print(
+    #         f"Need to fetch remote files for model {model_name}. Ignored the following error: {e}"
+    #     )
+    #     model = load_model(model_name, local_files_only=False, processing_kwargs=processing_kwargs, **model_kwargs)
 
     out_dict = {}
-    #new shape: layer neuron model_dim
     if hasattr(model, "W_gate") and model.W_gate is not None:
-        out_dict["W_gate"] = einops.rearrange(model.W_gate.detach(), 'l d n -> l n d').to(device)
-    out_dict["W_in"] = einops.rearrange(model.W_in.detach(), 'l d n -> l n d').to(device)
-    out_dict["W_out"] = model.W_out.detach().to(device) #already has the shape we want
+        out_dict["W_gate"] = model.W_gate.detach().to(device)
+    out_dict["W_in"] = model.W_in.detach().to(device)
+    out_dict["W_out"] = model.W_out.detach().to(device)
+    #ensure shape: layer neuron model_dim
+    for key,value in out_dict.items():
+        if value.shape[1]==model.cfg.d_model:
+            out_dict[key] = einops.rearrange(value, 'l d n -> l n d')
+            assert out_dict[key].shape[2]==model.cfg.d_model, f"tensor {key} has a weird shape: {value.shape}"
 
     out_dict["d_model"] = model.cfg.d_model
 

@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 import pandas as pd
 
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 
 parser = ArgumentParser()
 parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')

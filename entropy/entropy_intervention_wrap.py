@@ -3,9 +3,9 @@ import os
 
 import torch
 import datasets
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 
-from weight_analysis_utils.utils import NAME_TO_COMBO
+from src.weight_analysis_utils.utils import NAME_TO_COMBO
 from entropy.entropy_intervention import run_intervention_experiment
 from neuron_choice import neuron_choice
 from ablation_utils.utils import get_mean_values

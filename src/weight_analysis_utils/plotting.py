@@ -711,6 +711,7 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         arrangement = (int(np.ceil(layers/ncols)), ncols)
         #fine-grained / cosines
         if "plot_fine" in experiments:# and not os.path.exists(f"{path}/fine.pdf"):
+            print('> fine-grained plot')
             fig, _ax = wcos_plot(
                 data,
                 range(layers),
@@ -725,6 +726,7 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
             plt.close()
         #norms of weight vectors
         if "plot_norms" in experiments:
+            print('> plot norms')
             fig, _ax = plot_norms(data, arrangement=arrangement)
             fig.savefig(f"{path}/norms.pdf", bbox_inches="tight")
             plt.close()
@@ -732,6 +734,7 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
             fig.savefig(f"{path}/norms_all_layers.pdf")
             plt.close()
         if "plot_norm_in_norm_out" in experiments:
+            print('> plot norm(w_in) vs norm(w_out)')
             fig, _ax = plot_norms(
                 data, arrangement=arrangement, keys=("norm_in", "norm_out")
             )
@@ -744,6 +747,7 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
             plt.close()
         #cosines vs norms
         if "plot_cosines_vs_norms" in experiments:
+            print('> plot cosines vs norms')
             for cosine_key in ["linout", "gateout", "gatelin"]:
                 if cosine_key not in data:
                     continue
@@ -762,6 +766,7 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
                     plt.close()
     #fine-grained / cosines for selected layers of selected model
     if "plot_selected" in experiments and model_name==kwargs["selected_model"]:
+        print('> fine-grained plot of selected layers')
         fig, _ax = wcos_plot(
             data,
             kwargs["selected_layers"],
@@ -775,11 +780,13 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         plt.close()
     #coarse-grained / category stats
     if "plot_coarse" in experiments:# and not os.path.exists(f"{path}/coarse.pdf"):
+        print('> coarse-grained plot (bar plot)')
         fig, _ax = my_survey(data['category_stats'], model_name)
         fig.savefig(f"{path}/coarse.pdf", bbox_inches='tight')
         plt.close()
     #coarse table of category stats
     if "make_table" in experiments:
+        print('> coarse-grained data as latex table')
         styler = make_table(data['category_stats'])
         styler.to_latex(
             f"{path}/table.tex",
@@ -789,12 +796,15 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         )
     #quartiles/boxplots
     if "plot_boxplots" in experiments:# and not os.path.exists(f"{path}/quartiles.pdf")
+        print('> boxplots')
         fig, _ax = plot_boxplots(data, model_name)
         fig.savefig(f"{path}/boxplot.pdf", bbox_inches='tight')
         plt.close()
-    if any(s in experiments for s in ("plot_half_coarse", "half_coarse_table")):
+    if any(s in experiments for s in ("plot_half_coarse", "half_coarse_table")) and "gateout" not in data:
+        #this code part is only for non-glu models
         half_coarse = half_coarse_categories(data)
         if "plot_half_coarse" in experiments:
+            print('> half-coarse plots')
             fig, _ax = my_survey(
                 half_coarse, model_name,
                 text_threshold=20000,#so large that there will be no text
@@ -802,6 +812,7 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
             fig.savefig(f"{path}/half_coarse.pdf", bbox_inches='tight')
             plt.close()
         if "half_coarse_table" in experiments:
+            print('> half-coarse table')
             styler = make_table(half_coarse)
             styler.to_latex(
                 f"{path}/half_coarse_table.tex",

@@ -5,7 +5,8 @@ import os
 
 import torch
 import datasets
-from transformer_lens import HookedTransformer, ActivationCache, TransformerBridge
+from transformer_lens import HookedTransformer, ActivationCache
+from transformer_lens.model_bridge import TransformerBridge
 
 from entropy.compare import unflattened_data
 from ablation_utils.utils import make_hooks

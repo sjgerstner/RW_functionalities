@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import torch
 
 from lists import EXPERIMENT_LIST, MODEL_LIST, VANILLA_MODELS
-from weight_analysis_utils import utils, plotting, loading
+from src.weight_analysis_utils import utils, plotting, loading
 
 torch.set_grad_enabled(False)
 
@@ -26,7 +26,8 @@ def cosines(mlp_weights):
 def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=None):
     model_data = loading.load_model_data(
         model_name,
-        cache_dir=cache_dir, checkpoint_value=checkpoint_value,
+        #cache_dir=cache_dir,
+        checkpoint_value=checkpoint_value,
         refactor_glu=args.refactor_glu,
         device=args.device,
     )
