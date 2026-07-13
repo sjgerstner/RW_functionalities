@@ -44,6 +44,7 @@ if __name__=='__main__':
     parser.add_argument('--activation_location', default='hook_post')
     parser.add_argument('--subexperiments', nargs='+', default=['all'])
     parser.add_argument('--layer_list', nargs='+', default=[0, 15, 31], type=int)
+    parser.add_argument('--device', default='cuda:0')
     args = parser.parse_args()
 
     if 'all' in args.subexperiments:
@@ -52,7 +53,16 @@ if __name__=='__main__':
         subexps = args.subexperiments
 
     #tensor of frequency by neuron
-    SUMMARY_PATH = f'neuroscope/results/{args.neuroscope_dir}/summary{"_refactored" if args.refactor_glu else ""}.pt'
+    SUMMARY_DIR = (
+        os.path.join(os.environ["WORK"], 'GLUScope-results')
+        if "WORK" in os.environ
+        else os.path.join('neuroscope', 'results')
+    )
+    SUMMARY_PATH = os.path.join(
+        SUMMARY_DIR,
+        args.neuroscope_dir,
+        f'summary{"_refactored" if args.refactor_glu else ""}.pt'
+        )
     summary_dict = torch.load(SUMMARY_PATH, map_location="cuda:0")
     if args.metric_type=='freq':
         if args.combo=='summary':
@@ -95,7 +105,7 @@ if __name__=='__main__':
             [f"Layer {i}" for i in range(n_layers)],
             savefile = LAYER_PATH,
             #suptitle = f"{SHORT_TO_LONG[args.combo]} by layer in {args.model}",
-            xlabel=_short_to_long(args.combo),
+            xlabel=_short_to_long(args.combo),#TODO there's a bug here
             ylabel="proportion of neurons",
             ncols=4,
             log=args.log,
@@ -108,7 +118,9 @@ if __name__=='__main__':
         my_data = []
         for i,key in enumerate(COMBO_TO_NAME.keys()):
             #lists of (layer neuron) tuples
-            neuron_list, baseline_list = neuron_choice.neuron_choice(args, key)
+            neuron_list, baseline_list = neuron_choice.neuron_choice(
+                args, key, data_dir=DATA_DIR,
+            )
             if neuron_list is None:#too few neurons in category
                 continue
             my_data.append([data_tensor[index].item() for index in neuron_list])

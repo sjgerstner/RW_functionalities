@@ -79,3 +79,10 @@ def load_data_if_exists(path):
     else:
         data={}
     return data
+
+def legacy_checkpoint_list():
+    from transformer_lens.loading_from_pretrained import OLMO_CHECKPOINTS_1B, OLMO_CHECKPOINTS_7B
+    return {
+        'allenai/OLMo-1B-hf': OLMO_CHECKPOINTS_1B,
+        'allenai/OLMo-7B-0424-hf': OLMO_CHECKPOINTS_7B,
+    }
