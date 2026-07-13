@@ -46,6 +46,7 @@ if __name__=='__main__':
     parser.add_argument('--subexperiments', nargs='+', default=['all'])
     parser.add_argument('--layer_list', nargs='+', default=[0, 15, 31], type=int)
     parser.add_argument('--device', default='cuda:0')
+    parser.add_argument('--legacy', action='store_true')
     args = parser.parse_args()
 
     if args.data_dir is None:
@@ -63,7 +64,7 @@ if __name__=='__main__':
     #tensor of frequency by neuron
     SUMMARY_DIR = (
         os.path.join(os.environ["WORK"], 'GLUScope-results')
-        if "WORK" in os.environ
+        if "WORK" in os.environ and not args.legacy
         else os.path.join('neuroscope', 'results')
     )
     SUMMARY_PATH = os.path.join(
