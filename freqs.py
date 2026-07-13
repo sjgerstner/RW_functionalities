@@ -35,7 +35,7 @@ if __name__=='__main__':
     parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424')
     parser.add_argument(
         '--data_dir',
-        default=None,#'../RW_functionalities_results',
+        default=None,
     )
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument('--refactor_glu', action='store_true')
@@ -104,6 +104,7 @@ if __name__=='__main__':
     d_mlp = data_tensor.shape[1]
 
     PLOT_DIR = f'{DATA_DIR}/plots/{args.combo}_{args.metric_type}/{args.model}'
+    #print(PLOT_DIR)
     os.makedirs(PLOT_DIR, exist_ok=True)
 
     #plotting by layer
