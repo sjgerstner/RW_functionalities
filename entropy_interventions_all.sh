@@ -45,7 +45,6 @@ while true; do
     wait -n  # wait for any one job to finish, then retry
 done
 physical_gpu="${VISIBLE_GPUS[$gpu_id]}"
-# job_counter=0
 
 # baseline run
 (
@@ -56,21 +55,10 @@ physical_gpu="${VISIBLE_GPUS[$gpu_id]}"
         "$@"
 ) &
 GPU_JOB_PIDS[$gpu_id]=$!
-#((job_counter++)) || true
 
 for intervention_type in {mean_ablation,zero_ablation}; do
     for n_neurons in "${n_neuron_variants[@]}"; do
         for neuron_subset_name in "${names[@]}"; do
-            # Enforce Concurrency Limit
-            # Wait until we have fewer than NUM_GPUS background jobs running
-            # while [ "$job_counter" -ge "$NUM_GPUS" ]; do
-            #     # Wait for one to finish
-            #     wait -n
-            #     ((job_counter--)) || true
-            # done
-            # Assign GPU ID cyclically (0, 1, ..., NUM_GPUS-1, 0, 1...)
-            # This ensures we never exceed the limit and distribute load evenly
-            #gpu_id=$((job_counter % NUM_GPUS))
             while true; do
                 gpu_id=$(get_free_gpu)
                 if [ "$gpu_id" != "-1" ]; then
@@ -78,9 +66,6 @@ for intervention_type in {mean_ablation,zero_ablation}; do
                 fi
                 wait -n  # wait for any one job to finish, then retry
             done
-            # Get the physical GPU ID corresponding to the logical slot
-            # If VISIBLE_GPUS is "0,1,2,3", then slot 0 -> physical 0, slot 1 -> physical 1.
-            # If VISIBLE_GPUS is "2,4,6", then slot 0 -> physical 2.
             physical_gpu="${VISIBLE_GPUS[$gpu_id]}"
             
             # Run the job with a restricted environment
@@ -95,21 +80,11 @@ for intervention_type in {mean_ablation,zero_ablation}; do
                     "$@"
             ) &
             GPU_JOB_PIDS[$gpu_id]=$!
-            #((job_counter++)) || true    GPU_JOB_PIDS[$gpu_id]=$!
         done
     done
     #conditional ablations
     for gate in "${!signs[@]}"; do
         for post in "${!signs[@]}"; do
-            # Enforce Concurrency Limit
-            # Wait until we have fewer than NUM_GPUS background jobs running
-            # while [ "$job_counter" -ge "$NUM_GPUS" ]; do
-            #     wait -n
-            #     ((job_counter--)) || true
-            # done
-            # # Assign GPU ID cyclically (0, 1, ..., NUM_GPUS-1, 0, 1...)
-            # # This ensures we never exceed the limit and distribute load evenly
-            # gpu_id=$((job_counter % NUM_GPUS))
             while true; do
                 gpu_id=$(get_free_gpu)
                 if [ "$gpu_id" != "-1" ]; then
@@ -117,9 +92,6 @@ for intervention_type in {mean_ablation,zero_ablation}; do
                 fi
                 wait -n  # wait for any one job to finish, then retry
             done
-            # Get the physical GPU ID corresponding to the logical slot
-            # If VISIBLE_GPUS is "0,1,2,3", then slot 0 -> physical 0, slot 1 -> physical 1.
-            # If VISIBLE_GPUS is "2,4,6", then slot 0 -> physical 2.
             physical_gpu="${VISIBLE_GPUS[$gpu_id]}"
             
             # Run the job with a restricted environment
@@ -135,7 +107,6 @@ for intervention_type in {mean_ablation,zero_ablation}; do
                     "$@"
             ) &
             GPU_JOB_PIDS[$gpu_id]=$!
-            #((job_counter++)) || true
         done
     done
 done

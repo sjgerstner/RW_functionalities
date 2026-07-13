@@ -11,6 +11,10 @@ from neuron_choice import neuron_choice
 from ablation_utils.utils import get_mean_values
 
 def make_save_path(args, neuron_subset_name, intervention_type):
+    if args.gate is not None:
+        neuron_subset_name+=f'_gate{args.gate}'
+    if args.post is not None:
+        neuron_subset_name+=f'_post{args.post}'
     return os.path.join(
         args.data_dir,
         args.output_dir,
@@ -84,8 +88,8 @@ def run_if_necessary(
 ):
     if not neuron_subset_name:
         neuron_subset_name = '_'.join([f'{l}.{n}' for l, n in neuron_subset])
-    if args.gate or args.post:
-        neuron_subset_name = f'{neuron_subset_name}_gate{args.gate}_post{args.post}'
+    # if args.gate or args.post:
+    #     neuron_subset_name = f'{neuron_subset_name}_gate{args.gate}_post{args.post}'
     if save_path is None:
         save_path = make_save_path(
             args,
