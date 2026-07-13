@@ -45,7 +45,7 @@ while true; do
     wait -n  # wait for any one job to finish, then retry
 done
 physical_gpu="${VISIBLE_GPUS[$gpu_id]}"
-job_counter=0
+# job_counter=0
 
 # baseline run
 (
