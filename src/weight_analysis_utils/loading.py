@@ -6,7 +6,7 @@ from torch import load
 from torch.cuda import empty_cache
 
 import einops
-from transformer_lens import TransformerBridge
+from transformer_lens.model_bridge import TransformerBridge
 
 def load_model(
     model_name: str,
@@ -86,7 +86,7 @@ def load_data_if_exists(path):
         data={}
     return data
 
-def legacy_checkpoint_list:
+def legacy_checkpoint_list():
     from transformer_lens.loading_from_pretrained import OLMO_CHECKPOINTS_1B, OLMO_CHECKPOINTS_7B
     return {
         'allenai/OLMo-1B-hf': OLMO_CHECKPOINTS_1B,

@@ -14,7 +14,11 @@ def _key_to_name(category_key):
         return COMBO_TO_NAME[category_key]
     return VANILLA_CATEGORIES[category_key]
 
-def neuron_choice(args, category_key, subset:float|int|str|None=None, baseline=True):
+def neuron_choice(
+        args, category_key,
+        subset:float|int|str|None=None, baseline=True,
+        data_dir:str|None=None,
+    ):
     """
     Create a list of (some) neurons of the given category,
     plus possibly a random baseline.
@@ -31,6 +35,8 @@ def neuron_choice(args, category_key, subset:float|int|str|None=None, baseline=T
         random_baseline (bool):
             create a random list of neurons from the same layers but not in the given category.
             Default True.
+        data_dir (str or None, default None): where to find the neuron data.
+            If None (default), use args.data_dir
 
     Returns:
         neuron_list: list of neurons formatted as (layer,neuron) tuples
@@ -38,7 +44,9 @@ def neuron_choice(args, category_key, subset:float|int|str|None=None, baseline=T
     """
     #category_index = CATEGORY_NAMES.index(category_name)
     random.seed(2512800)
-    path = f"{args.data_dir}/results/{args.model}"
+    if data_dir is None:
+        data_dir = args.data_dir
+    path = f"{data_dir}/results/{args.model}"
     # with open(f"{path}/data.pickle", 'rb') as f:
     #     data = pickle.load(f)
     data_path = f"{path}/data.pt"
