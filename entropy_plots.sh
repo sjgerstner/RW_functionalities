@@ -44,7 +44,7 @@ for intervention_type in {mean_ablation,zero_ablation}; do
         for name in "${names[@]}"; do
             if [ "$name" = "$n_neurons" ] || [ "$n_neurons" = "None" ]; then neurons+="$name ";
             else if [ "$name" = "strengthening" ] && [ "$n_neurons" = "weakening" ]; then :;
-            else neurons+="$name$n_neurons "
+            else neurons+="${name}_${n_neurons} "
             fi fi
         done
         #neurons="$neurons% "
@@ -85,7 +85,7 @@ for intervention_type in {mean_ablation,zero_ablation}; do
         export CUDA_VISIBLE_DEVICES="$physical_gpu"
         python -m entropy.compare \
             --model $model \
-            --experiment_name "${model}/weakening_${intervention_type}" \
+            --experiment_name "${model}/weakening_complete_${intervention_type}" \
             --intervention_type $intervention_type \
             --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post-
     ) &

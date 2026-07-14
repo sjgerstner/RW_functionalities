@@ -73,6 +73,8 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
     diffs = {}
     baseline_names=[]
     for neuron_subset_name in neuron_subset_names:
+        if not os.path.exists(os.path.join(data_path, neuron_subset_name)):
+            continue
         print(neuron_subset_name)
         diffs[neuron_subset_name] = compute_data(
             data_path, metric, neuron_subset_name, intervention_type
@@ -134,20 +136,20 @@ if __name__=='__main__':
     )
     parser.add_argument('--neurons', nargs='+', default=['weakening'])
     args = parser.parse_args()
-    neuron_subset_names = [s.replace('_', ' ') for s in args.neurons]
+    #neuron_subset_names = [s.replace('_', ' ') for s in args.neurons]
     if "WORK" not in os.environ:
         os.environ["WORK"]='..'
     if args.metric=='all':
         for metric in ['entropy', 'loss', 'rank', 'scale']:
             print(metric)
             compare(
-                args, metric=metric, neuron_subset_names=neuron_subset_names,
+                args, metric=metric, neuron_subset_names=args.neurons,
                 intervention_type=args.intervention_type,
                 #log=True
             )
     else:
         compare(
-            args, metric=args.metric, neuron_subset_names=neuron_subset_names,
+            args, metric=args.metric, neuron_subset_names=args.neurons,
             intervention_type=args.intervention_type,
             #log=True
         )

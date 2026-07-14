@@ -42,7 +42,7 @@ def run_with_baseline(
 ):
     if neuron_subset_name is None:
         if neuron_list:
-            neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+            neuron_subset_name=f'{args.neuron_subset_name}_{subset if subset else ""}'
             intervention_type=args.intervention_type
         else:
             neuron_subset_name='baseline'
@@ -216,10 +216,10 @@ if __name__ == '__main__':
                 raise RuntimeError(f"could not parse args.n_neurons: {args.n_neurons}") from e
         neuron_list, random_baseline = neuron_choice(
             args,
-            category_key=NAME_TO_COMBO[args.neuron_subset_name],
+            category_key=NAME_TO_COMBO[args.neuron_subset_name.replace('_', ' ')],
             subset=subset,
         )
-        neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+        neuron_subset_name=f'{args.neuron_subset_name}_{subset if subset else ""}'
         intervention_type=args.intervention_type
     #make the save path
     save_paths = [make_save_path(
