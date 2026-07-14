@@ -1,6 +1,7 @@
 """Code to create the plots for the RW functionalities paper"""
 
 import itertools
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
@@ -331,15 +332,30 @@ def plot_all_medians(
     )
     return fig, ax
 
-def histogram_subplot(ax, diff_nonzero, neuron_subset_name, **kwargs):
+def histogram_subplot(ax:plt.Axes, diff_nonzero:np.ndarray, neuron_subset_name:str, **kwargs):
     ax.hist(diff_nonzero, **kwargs)
     ax.set_title(neuron_subset_name.replace(' ', '\n'))
     return ax
 
 def aligned_histograms(
-    list_data, subtitles, savefile, suptitle=None, xlabel='', ylabel='number of model predictions',
-    ncols=1, n_bins=None, weighted=False, **kwargs
+    list_data:list[np.ndarray], subtitles:list[str], savefile:str,
+    suptitle:str|None=None, xlabel:str='', ylabel:str='number of model predictions',
+    ncols:int=1, n_bins:int | Sequence[float] | str | None=None, weighted=False, **kwargs
 ):
+    """Plot and save aligned histograms, i.e., with x and y axes properly aligned.
+
+    Args:
+        list_data (list[ndarray]):
+            list of datasets to plot, each of which is represented as a flat numpy array.
+        subtitles (list[str]): title of each subplot
+        savefile (str): path to save the plot
+        suptitle (str, optional): title of the whole plot. Defaults to None (no title).
+        xlabel (str, optional): label of x axis (shared by all subplots). Defaults to '' (no label).
+        ylabel (str, optional): label of y axis (shared by all subplots). Defaults to 'number of model predictions'.
+        ncols (int, optional): number of columns (defines how the subplots are laid out within the plot). Defaults to 1.
+        n_bins (int | Sequence[float] | str | None, optional): passed to the matplotlib hist() function to define number of bins. Defaults to None.
+        weighted (bool, optional): if True, make a weighted histogram. Defaults to False.
+    """
     nplots = len(list_data)
     nrows = int(np.ceil(nplots/ncols))
     #ncols = len(list_list_data[0])
