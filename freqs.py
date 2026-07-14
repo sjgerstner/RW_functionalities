@@ -11,6 +11,7 @@ from transformer_lens import HookedTransformer
 import neuron_choice
 from src.weight_analysis_utils.plotting import SHORT_TO_LONG, _short_to_long, aligned_histograms, freq_sim_scatter, plot_any_vs_any
 from src.weight_analysis_utils.utils import COMBO_TO_NAME
+from utils import get_data_dir
 
 def load_wout_norms(model_name:str)->torch.Tensor:
     work_dir = os.environ["WORK"] if "WORK" in os.environ else '..'
@@ -49,12 +50,7 @@ if __name__=='__main__':
     parser.add_argument('--legacy', action='store_true')
     args = parser.parse_args()
 
-    if args.data_dir is None:
-        if "WORK" not in os.environ:
-            os.environ["WORK"]='..'
-        DATA_DIR = os.environ["WORK"] + '/RW_functionalities_results'
-    else:
-        DATA_DIR = args.data_dir
+    DATA_DIR = get_data_dir(args)
 
     if 'all' in args.subexperiments:
         subexps = ["layer_plots", "category_plots", "scatter_plots", "table", "selected", "all_layers"]
