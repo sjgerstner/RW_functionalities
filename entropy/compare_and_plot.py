@@ -8,7 +8,7 @@ from .compare import compare
 def compare_and_plot(args, metric, neuron_subset_names, intervention_type='zero_ablation', **kwargs):
     diffs, data_dir = compare(args, metric=metric, neuron_subset_names=neuron_subset_names, intervention_type=intervention_type)
     list_data = list(diffs.values())
-    subtitles = list(k.replace('_', ' ', 1) for k in diffs)
+    subtitles = list(k.replace('_', ' ') for k in diffs)
     experiment_dir = f'{data_dir}/{args.plot_dir}/{args.experiment_name}'
     if not os.path.exists(experiment_dir):
         os.makedirs(experiment_dir, exist_ok=True)
