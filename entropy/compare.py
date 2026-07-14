@@ -18,11 +18,13 @@ def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='z
     #print('loading data...')
     baseline = torch.load(
         f'{data_path}/baseline/None_None/{metric}.pt',
-        weights_only=True
+        weights_only=True,
+        map_location='cuda:0' if torch.cuda.is_available() else 'cpu',
     )
     ablated = torch.load(
         f'{data_path}/{neuron_subset_name}/{intervention_type}_None/{metric}.pt',
-        weights_only=True
+        weights_only=True,
+        map_location='cuda:0' if torch.cuda.is_available() else 'cpu',
     )#sample pos
     if baseline.shape[0]!=ablated.shape[0]:
         #for some reason an earlier version of dolma-small had 45734 rows
@@ -132,19 +134,20 @@ if __name__=='__main__':
     )
     parser.add_argument('--neurons', nargs='+', default=['weakening'])
     args = parser.parse_args()
+    neuron_subset_names = [s.replace('_', ' ') for s in args.neurons]
     if "WORK" not in os.environ:
         os.environ["WORK"]='..'
     if args.metric=='all':
         for metric in ['entropy', 'loss', 'rank', 'scale']:
             print(metric)
             compare(
-                args, metric=metric, neuron_subset_names=args.neurons,
+                args, metric=metric, neuron_subset_names=neuron_subset_names,
                 intervention_type=args.intervention_type,
                 #log=True
             )
     else:
         compare(
-            args, metric=args.metric, neuron_subset_names=args.neurons,
+            args, metric=args.metric, neuron_subset_names=neuron_subset_names,
             intervention_type=args.intervention_type,
             #log=True
         )

@@ -2,7 +2,7 @@ set -euox pipefail
 
 model=$1
 n_neuron_variants=("strengthening" "weakening" "None")
-names=("strengthening" "conditional strengthening" "proportional change" "conditional weakening" "weakening" "orthogonal output")
+names=("strengthening" "conditional_strengthening" "proportional_change" "conditional_weakening" "weakening" "orthogonal_output")
 
 #GPU assignment logic
 # Detect GPUs
@@ -42,13 +42,12 @@ for intervention_type in {mean_ablation,zero_ablation}; do
 
         neurons=""
         for name in "${names[@]}"; do
-            if [$name -eq $n_neurons]; then
-                neurons+="$name ";
-            else
-                neurons+="$name$n_neurons "
-            fi
+            if [ "$name" = "$n_neurons" ] || [ "$n_neurons" = "None" ]; then neurons+="$name ";
+            else if [ "$name" = "strengthening" ] && [ "$n_neurons" = "weakening" ]; then :;
+            else neurons+="$name$n_neurons "
+            fi fi
         done
-        neurons="$neurons% "
+        #neurons="$neurons% "
 
         #GPU assignment logic
         while true; do
