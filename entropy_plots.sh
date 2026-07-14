@@ -61,11 +61,12 @@ for intervention_type in {mean_ablation,zero_ablation}; do
 
         (
             export CUDA_VISIBLE_DEVICES="$physical_gpu"
-            python -m entropy.compare \
+            python -m entropy.compare_and_plot \
                 --model $model \
                 --experiment_name "${model}/${n_neurons}_${intervention_type}" \
                 --intervention_type $intervention_type \
-                --neurons $neurons
+                --neurons $neurons \
+                --table_format md
         ) &
         GPU_JOB_PIDS[$gpu_id]=$!
 
@@ -83,11 +84,12 @@ for intervention_type in {mean_ablation,zero_ablation}; do
 
     (
         export CUDA_VISIBLE_DEVICES="$physical_gpu"
-        python -m entropy.compare \
+        python -m entropy.compare_and_plot \
             --model $model \
             --experiment_name "${model}/weakening_complete_${intervention_type}" \
             --intervention_type $intervention_type \
-            --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post-
+            --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post- \
+            --table_format md
     ) &
     GPU_JOB_PIDS[$gpu_id]=$!
 
