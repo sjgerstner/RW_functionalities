@@ -19,14 +19,16 @@ def layerwise_count_df(layerwise_counts):
 def quartile_df(
     list_data:list[np.ndarray], subtitles:list[str],
 ):
-    quantiles = [np.quantile(data, q=[.25, .5, .75]) for data in list_data]
+    quantiles = [np.quantile(data, q=[0, .25, .5, .75, 1]) for data in list_data]
     df = pd.DataFrame.from_dict(
         {
             "name": subtitles,
             "mean": [data.mean() for data in list_data],
-            "quartile1": [quantile[0] for quantile in quantiles],
-            "median": [quantile[1] for quantile in quantiles],
-            "quartile3": [quantile[2] for quantile in quantiles],
+            "min": [quantile[0] for quantile in quantiles],
+            "quartile1": [quantile[1] for quantile in quantiles],
+            "median": [quantile[2] for quantile in quantiles],
+            "quartile3": [quantile[3] for quantile in quantiles],
+            "max": [quantile[4] for quantile in quantiles]
         },
         orient='columns',
     )
