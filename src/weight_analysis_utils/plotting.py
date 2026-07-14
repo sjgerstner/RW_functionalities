@@ -14,7 +14,7 @@ import seaborn as sns
 
 from .utils import half_coarse_categories
 from .plotting_utils import get_names
-from .tables import make_table
+from .tables import layerwise_count_df, df_to_nice_latex
 
 # torch.set_grad_enabled(False)
 #TODO if necessary, use inference mode WITHIN the functions
@@ -740,8 +740,9 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
         plt.close()
     #coarse table of category stats
     if "make_table" in experiments:
-        styler = make_table(data['category_stats'])
-        styler.to_latex(
+        df = layerwise_count_df(data['category_stats'])
+        df_to_nice_latex(
+            df,
             f"{path}/table.tex",
             label=f'tab:{model_name}',
             caption=f'Distribution of neuron IO classes by layer and category in {model_name}',
@@ -770,8 +771,9 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
                 print(f"failed to make half coarse plot for model {model_name} because of index error:", e)
                 print(half_coarse.keys())
         if "half_coarse_table" in experiments:
-            styler = make_table(half_coarse)
-            styler.to_latex(
+            df = layerwise_count_df(half_coarse)
+            df_to_nice_latex(
+                df,
                 f"{path}/half_coarse_table.tex",
                 label=f'tab:{model_name}_half_coarse',
                 caption=f'Distribution of neuron IO cosines by layer in {model_name}',
