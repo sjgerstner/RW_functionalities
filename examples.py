@@ -1,5 +1,4 @@
 from argparse import Namespace
-from functools import partial
 from json import dumps
 import os
 
