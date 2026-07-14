@@ -226,6 +226,7 @@ dependencies:
   - spirv-tools=2025.1=hdb19cb5_0
   - sqlite=3.50.2=hb25bd0a_1
   - stack_data=0.2.0=pyhd3eb1b0_0
+  - tabulate=0.10.0=py312h06a4308_0
   - tbb=2021.8.0=hdb19cb5_0
   - terminado=0.17.1=py312h06a4308_0
   - tinycss2=1.4.0=py312h06a4308_0
