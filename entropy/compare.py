@@ -91,7 +91,7 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
     subtitles = list(k.replace('_', ' ', 1) for k in diffs)
     experiment_dir = f'{data_dir}/{args.plot_dir}/{args.experiment_name}'
     if not os.path.exists(experiment_dir):
-        os.mkdir(experiment_dir)
+        os.makedirs(experiment_dir, exist_ok=True)
     if args.log:
         kwargs["log"]=True
     metric = "log_scale" if metric=='scale' else metric
@@ -118,7 +118,13 @@ if __name__=='__main__':
     parser.add_argument('--metric', default='all')
     parser.add_argument(
         '--intervention_type',
-        choices=["zero_ablation", "threshold_ablation", "fixed_activation", "relu_ablation", "mean_ablation"],
+        choices=[
+            "zero_ablation",
+            "threshold_ablation",
+            "fixed_activation",
+            "relu_ablation",
+            "mean_ablation"
+        ],
         default="zero_ablation",
     )
     parser.add_argument(
