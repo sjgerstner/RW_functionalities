@@ -477,7 +477,7 @@ def _freq_sim_scatter(
 
     ax.set_ylabel('')
     ax.set_xlabel('')
-    ax.set_title(title)
+    ax.set_title(title, fontsize=11)
 
     if fit_line:
         #corr = np.corrcoef(data[x], data[y])[0, 1]
@@ -530,8 +530,9 @@ def freq_sim_scatter(
         sharex=True, sharey=True,
         layout='constrained',
     )#by default both x and y axis will show the interval (0,1).
-    fig.set_figwidth(4*arrangement[1])
-    fig.set_figheight(4*arrangement[0])
+    width = 3 if arrangement[1]==1 else 6
+    fig.set_figwidth(width)
+    fig.set_figheight(arrangement[0] * width/arrangement[1])
 
     if arrangement==(1,1):
         axs_list = [axes]

@@ -33,7 +33,7 @@ def process_activation_data(summary_dict, combo, activation_location):
 if __name__=='__main__':
     parser = ArgumentParser()
     #parser.add_argument('--work_dir', default='.')
-    parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424')
+    #parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424')
     parser.add_argument(
         '--data_dir',
         default=None,#'../RW_functionalities_results',
@@ -56,8 +56,8 @@ if __name__=='__main__':
     else:
         DATA_DIR = args.data_dir
 
-    if 'all' in args.subexperiments:
-        subexps = ["layer_plots", "category_plots", "scatter_plots", "table", "selected", "all_layers"]
+    if 'all' in args.subexperiments:#TODO fix code for layer_plots, category_plots, table, 
+        subexps = ["layer_plots", "category_plots", "scatter_plots", "table", "selected", "all_layers", "norms"]
     else:
         subexps = args.subexperiments
 
@@ -69,7 +69,7 @@ if __name__=='__main__':
     )
     SUMMARY_PATH = os.path.join(
         SUMMARY_DIR,
-        args.neuroscope_dir,
+        args.model.split('/')[-1],
         f'summary{"_refactored" if args.refactor_glu else ""}.pt'
         )
     summary_dict = torch.load(SUMMARY_PATH, map_location="cuda:0")
@@ -193,13 +193,14 @@ if __name__=='__main__':
         #tensor of category by neuron
         PATH = f"{DATA_DIR}/results/{args.model}"
         if args.refactor_glu:
-            PATH+="/refactored"
+            if refactored_already:=os.path.exists(PATH+"/refactored/data.pt"):
+                PATH+="/refactored"
+        else:
+            refactored_already=True#we don't need to refactor_glu
         data = torch.load(f"{PATH}/data.pt")
-        # with open(f"{PATH}/data.pt", 'rb') as f:
-        #     data = pickle.load(f)
-        # linout = data["linout"]
-        # gateout = data["gateout"]
-        # gatelin = data["gatelin"]
+        if not refactored_already:
+            data["gateout"]*=torch.sign(data["gatelin"])
+            data["gatelin"]=torch.abs(data["gatelin"])
         data[f'{args.combo}_{args.metric_type}'] = data_tensor
 
         #scatter plots

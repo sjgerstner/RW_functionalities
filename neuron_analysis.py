@@ -31,7 +31,7 @@ def neuron_analysis(model:HookedTransformer|TransformerBridge, layer, neuron, em
     emb: if None (default), unembedding matrix of model.
     Otherwise set explicit matrix of shape d_model, d_vocab.
     """
-    out = model.blocks[layer].mlp.W_out[neuron,:].detach()
+    out = model.blocks[layer].mlp.W_out[neuron,:].detach()#TODO check dimensions!
     lin = model.blocks[layer].mlp.W_in[:,neuron].detach()
     linout = cos(lin, out).item()
     out_pos = topk_df(out, model, emb=emb, k=k)

@@ -23,7 +23,11 @@ def cosines(mlp_weights):
         data["gateout"] = utils.cos(mlp_weights["W_gate"], mlp_weights["W_out"]).cpu()
     return data
 
-def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=None):
+def _get_basic_data(
+        args, data, model_name,
+        #cache_dir=None,
+        checkpoint_value=None
+    ):
     model_data = loading.load_model_data(
         model_name,
         #cache_dir=cache_dir,
@@ -45,7 +49,11 @@ def _get_basic_data(args, data, model_name, cache_dir=None, checkpoint_value=Non
         data = utils.norm_data(model_data=model_data, data_to_write=data)
     return data
 
-def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
+def analysis(
+        args, model_name,
+        #cache_dir=None,
+        checkpoint_value=None
+    ):
     """General function
     that computes weight cosines of the given model
     and then does the analyses specified in the args"""
@@ -70,7 +78,9 @@ def analysis(args, model_name, cache_dir=None, checkpoint_value=None):
         or (("norms" in args.experiments) and "norm_gate" not in data)
     ):
         data = _get_basic_data(
-            args, data, model_name, cache_dir=cache_dir, checkpoint_value=checkpoint_value
+            args, data, model_name,
+            #cache_dir=cache_dir,
+            checkpoint_value=checkpoint_value
         )
         torch.save(data, f"{path}/data.pt")
     #advanced
@@ -168,7 +178,7 @@ if __name__=="__main__":
                 data = analysis(
                     args, model_name,
                     checkpoint_value=model_to_checkpoints[model_name][checkpoint_index],
-                    cache_dir='/nfs/datz/olmo_models',#TODO
+                    #cache_dir='/nfs/datz/olmo_models',#TODO
                 )
                 del data
     if "plot_all_medians" in args.experiments:
