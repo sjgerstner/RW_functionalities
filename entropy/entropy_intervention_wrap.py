@@ -9,6 +9,7 @@ from src.weight_analysis_utils.utils import NAME_TO_COMBO
 from entropy.entropy_intervention import run_intervention_experiment
 from neuron_choice import neuron_choice
 from ablation_utils.utils import get_mean_values
+from neuroscope.a_dataset import tokenize_dataset
 
 def make_save_path(args, neuron_subset_name, intervention_type):
     if 'WORK' not in os.environ:
@@ -187,6 +188,15 @@ if __name__ == '__main__':
     #     '--separate', action='store_true',
     #     help='also do the ablation analysis for each neuron separately'
     # )
+    parser.add_argument('--add_bos_token', type=bool, default=True,
+                        help="add bos token to every example")
+    parser.add_argument('--max_length', type=int, default=1024,
+                        help="length of example token blocks")
+    parser.add_argument('--return_overflowing_tokens', type=bool, default=False,
+                        help="""Make additional training examples with overflowing tokens.
+                        In this case it is currently not possible to keep the ids and metadata.""")
+    parser.add_argument('--padding', type=bool, default=False,
+                        help="pad examples to args.max_length")
 
     args = parser.parse_args()
 
@@ -247,10 +257,13 @@ if __name__ == '__main__':
         model.eval()
         torch.set_grad_enabled(False)
 
-        tokenized_dataset = datasets.load_from_disk(
+        dataset = datasets.load_from_disk(
             args.token_dataset
         )
-        tokenized_dataset = tokenized_dataset.select_columns('input_ids')
+        if args.model.startswith('allenai/OLMo-1B') or args.model.startswith('allenai/OLMo-7B'):
+            tokenized_dataset = dataset.select_columns('input_ids')
+        else:
+            tokenized_dataset, _tokenizer = tokenize_dataset(args, dataset)
 
         run_with_baseline(
             args,
