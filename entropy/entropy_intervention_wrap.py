@@ -66,7 +66,7 @@ def run_with_baseline(
         mean_values=mean_values,
         save_path=save_path,
     )
-    if random_baseline is not None and args.gate is None and args.post is None:
+    if not args.test and random_baseline is not None and args.gate is None and args.post is None:
         run_if_necessary(
             args,
             model,
@@ -188,6 +188,7 @@ if __name__ == '__main__':
     #     '--separate', action='store_true',
     #     help='also do the ablation analysis for each neuron separately'
     # )
+    #tokenization args
     parser.add_argument('--add_bos_token', type=bool, default=True,
                         help="add bos token to every example")
     parser.add_argument('--max_length', type=int, default=1024,
@@ -197,6 +198,8 @@ if __name__ == '__main__':
                         In this case it is currently not possible to keep the ids and metadata.""")
     parser.add_argument('--padding', type=bool, default=False,
                         help="pad examples to args.max_length")
+    #test
+    parser.add_argument('--test', action='store_true')
 
     args = parser.parse_args()
 
@@ -260,10 +263,14 @@ if __name__ == '__main__':
         dataset = datasets.load_from_disk(
             args.token_dataset
         )
-        if args.model.startswith('allenai/OLMo-1B') or args.model.startswith('allenai/OLMo-7B'):
-            tokenized_dataset = dataset.select_columns('input_ids')
-        else:
+        assert isinstance(dataset, datasets.Dataset)
+        if not args.model.startswith('allenai/OLMo-1B') and not args.model.startswith('allenai/OLMo-7B'):
             tokenized_dataset, _tokenizer = tokenize_dataset(args, dataset)
+        tokenized_dataset = dataset.select_columns('input_ids')
+        tokenized_dataset = tokenized_dataset.with_format('torch')
+        if args.test:
+            print(tokenized_dataset)
+            print(tokenized_dataset[0])
 
         run_with_baseline(
             args,

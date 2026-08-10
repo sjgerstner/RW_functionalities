@@ -1,6 +1,6 @@
 #TODO save neuron choices to avoid recomputing
 
-from os.path import exists
+import os
 #import pickle
 import random
 
@@ -45,12 +45,15 @@ def neuron_choice(
     #category_index = CATEGORY_NAMES.index(category_name)
     random.seed(2512800)
     if data_dir is None:
-        data_dir = args.data_dir
+        data_dir = os.path.join(
+            os.environ["WORK"] if "WORK" in os.environ else '..',
+            args.data_dir
+        )
     path = f"{data_dir}/results/{args.model}"
     # with open(f"{path}/data.pickle", 'rb') as f:
     #     data = pickle.load(f)
     data_path = f"{path}/data.pt"
-    if not exists(data_path):
+    if not os.path.exists(data_path):
         data_path = f"{path}/refactored/data.pt"
     data = torch.load(data_path, map_location=args.device)
     neuron_tensor = torch.nonzero(is_in_category(data['categories'],category_key))

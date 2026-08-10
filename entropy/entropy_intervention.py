@@ -72,6 +72,7 @@ def run_intervention_experiment(
     print("> preparing hooks...")
     conditioning_values = {}
     hooks = []
+    model_dim_first = model.blocks[0].mlp.W_gate.shape[0]==model.cfg.d_model
     if neuronwise_hooks:
         for lix, nix in neuron_subset:
             conditioning_values[(lix,nix)]={}
@@ -79,7 +80,10 @@ def run_intervention_experiment(
                 args,
                 lix, nix,
                 conditioning_values[(lix,nix)],
-                sign=(model.blocks[lix].W_gate[:,nix]@model.blocks[lix].W_in[:,nix]).item(),
+                sign=(
+                    (model.blocks[lix].mlp.W_gate[:,nix] if model_dim_first else model.blocks[lix].mlp.W_gate[nix,:]) @
+                    (model.blocks[lix].mlp.W_in[:,nix] if model_dim_first else model.blocks[lix].mlp.W_in[nix,:])
+                ).item(),
                 mean_value=mean_values[(lix,nix)].item(),
             )
     else:
@@ -95,7 +99,11 @@ def run_intervention_experiment(
                 args,
                 layer=lix, neuron=neurons,
                 conditioning_value=conditioning_values[lix],
-                sign=einsum(model.blocks[lix].mlp.W_gate[:,neurons], model.blocks[lix].mlp.W_in[:,neurons], "model neurons, model neurons -> neurons"),
+                sign=einsum(
+                    model.blocks[lix].mlp.W_gate[:,neurons] if model_dim_first else model.blocks[lix].mlp.W_gate[neurons,:],
+                    model.blocks[lix].mlp.W_in[:,neurons] if model_dim_first else model.blocks[lix].mlp.W_in[neurons,:],
+                    "model neurons, model neurons -> neurons" if model_dim_first else "neurons model, neurons model -> neurons"
+                ),
                 mean_value=mean_values[lix,neurons],
             )
 
@@ -126,7 +134,14 @@ def run_intervention_experiment(
     print(">done")
 
     offset = 0
-    for step, batch in enumerate(tqdm.tqdm(dataloader)):
+    for step, batch in enumerate(tqdm.tqdm(
+        #dataset
+        dataloader
+    )):
+        if args.test:
+            if step>0:
+                return
+            print(batch)
         batch = batch.to(device)
         logits = model.run_with_hooks(
             input=batch["input_ids"],
