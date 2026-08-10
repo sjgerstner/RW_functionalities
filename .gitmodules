@@ -1,6 +1,6 @@
 [submodule "TransformerLens"]
 	path = TransformerLens
-	url = https://github.com/adhakimi/TransformerLens
+	url = https://github.com/sjgerstner/TransformerLens
 [submodule "neuroscope"]
 	path = neuroscope
 	url = https://github.com/sjgerstner/neuroscope
