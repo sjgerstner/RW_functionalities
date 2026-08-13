@@ -12,10 +12,10 @@ def compare_and_plot(args, metric, neuron_subset_names, intervention_type='zero_
     experiment_dir = f'{data_dir}/{args.plot_dir}/{args.experiment_name}'
     if not os.path.exists(experiment_dir):
         os.makedirs(experiment_dir, exist_ok=True)
+    metric = "log_scale" if metric=='scale' else metric
     if args.plot:
         if args.log:
             kwargs["log"]=True
-        metric = "log_scale" if metric=='scale' else metric
         plotting.aligned_histograms(
             list_data,
             subtitles=subtitles,
@@ -28,7 +28,10 @@ def compare_and_plot(args, metric, neuron_subset_names, intervention_type='zero_
     if args.table_format is not None:
         df = tables.quartile_df(list_data=list_data, subtitles=subtitles)
         if args.table_format in ["markdown", "md"]:
-            df.to_markdown(os.path.join(experiment_dir, f'{metric}{"_log" if args.log else ""}.md'))
+            df.to_markdown(
+                os.path.join(experiment_dir, f'{metric}{"_log" if args.log else ""}.md'),
+                index=False
+            )
         else:
             raise NotImplementedError(f"table format {args.table_format} is not implemented yet.")
 

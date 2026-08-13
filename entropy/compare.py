@@ -47,8 +47,7 @@ def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_
     diff_nonzero = diff_flattened[diff_flattened.nonzero()].cpu().numpy()
     return diff_nonzero
 
-def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation', **kwargs):
-    absrel = '-' #'/' if metric=='scale' else '-'
+def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'):
     data_dir = args.data_dir if args.data_dir is not None else os.environ["WORK"]+'/RW_functionalities_results'
     data_path = f'{data_dir}/intervention_results/{args.model}/{args.dataset}'
     print('computing data...')
@@ -56,8 +55,9 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
     baseline_names=[]
     for neuron_subset_name in neuron_subset_names:
         if not os.path.exists(os.path.join(data_path, neuron_subset_name)):
+            print(neuron_subset_name, "not found")
             continue
-        print(neuron_subset_name)
+        #print(neuron_subset_name)
         diffs[neuron_subset_name] = compute_data(
             data_path, metric, neuron_subset_name, intervention_type
         )
@@ -65,7 +65,7 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
         if baseline_exists:
             baseline_name = neuron_subset_name+'_baseline'
             baseline_names.append(baseline_name)
-            print(baseline_name)
+            #print(baseline_name)
             diffs[baseline_name] = compute_data(
                 data_path, metric, baseline_name, intervention_type
             )

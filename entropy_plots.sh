@@ -1,4 +1,4 @@
-set -euox pipefail
+#set -euox pipefail #TODO uncomment
 
 model=$1
 n_neuron_variants=("strengthening" "weakening" "None")
@@ -42,12 +42,13 @@ for intervention_type in {mean_ablation,zero_ablation}; do
 
         neurons=""
         for name in "${names[@]}"; do
-            if [ "$name" = "$n_neurons" ] || [ "$n_neurons" = "None" ]; then neurons+="$name ";
-            else if [ "$name" = "strengthening" ] && [ "$n_neurons" = "weakening" ]; then :;
-            else neurons+="${name}_${n_neurons} "
-            fi fi
+            if [ "$name" = "$n_neurons" ] || [ "$n_neurons" = "None" ]; then
+                neurons+="$name "
+            elif [ "$name" != "strengthening" ] || [ "$n_neurons" != "weakening" ]; then
+                neurons+="${name}_${n_neurons} "
+            fi
         done
-        #neurons="$neurons% "
+        echo $neurons
 
         #GPU assignment logic
         while true; do
@@ -66,6 +67,7 @@ for intervention_type in {mean_ablation,zero_ablation}; do
                 --experiment_name "${model}/${n_neurons}_${intervention_type}" \
                 --intervention_type $intervention_type \
                 --neurons $neurons \
+                --plot \
                 --table_format md
         ) &
         GPU_JOB_PIDS[$gpu_id]=$!
@@ -89,6 +91,7 @@ for intervention_type in {mean_ablation,zero_ablation}; do
             --experiment_name "${model}/weakening_complete_${intervention_type}" \
             --intervention_type $intervention_type \
             --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post- \
+            --plot \
             --table_format md
     ) &
     GPU_JOB_PIDS[$gpu_id]=$!

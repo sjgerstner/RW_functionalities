@@ -148,6 +148,7 @@ def run_intervention_experiment(
             attention_mask=batch["attention_mask"],
             fwd_hooks=hooks
         )
+        assert not logits.isnan().any()
         #print(logits.shape)
         bs, local_seq_len = batch["input_ids"].shape
         token_loss = lm_cross_entropy_loss(
@@ -156,6 +157,7 @@ def run_intervention_experiment(
             batch["attention_mask"],
             per_token=True
         ).cpu()
+        assert not token_loss.isnan().any()
         probs = F.softmax(logits, dim=-1)
         entropies = (
             - torch.sum(probs * torch.log(probs + 1e-8), dim=-1)*batch["attention_mask"]

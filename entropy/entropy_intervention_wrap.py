@@ -21,7 +21,7 @@ def make_save_path(args, neuron_subset_name, intervention_type):
         neuron_subset_name+=f'_post{args.post}'
     return os.path.join(
         os.environ['WORK'],
-        args.data_dir,
+        'RW_functionalities_results',#args.data_dir,
         args.output_dir,
         args.model,
         args.token_dataset.split('/')[-1],
@@ -124,7 +124,10 @@ if __name__ == '__main__':
     # general arguments
     # parser.add_argument('--work_dir', default='.')
     # parser.add_argument('--wcos_dir', default='.')
-    parser.add_argument('--data_dir', default='RW_functionalities_results')
+    parser.add_argument(
+        '--data_dir',
+        default=None,#'RW_functionalities_results'
+    )
     parser.add_argument(
         '--output_dir', default='intervention_results')
     parser.add_argument(
@@ -235,7 +238,7 @@ if __name__ == '__main__':
             subset=subset,
             data_dir=data_dir,
         )
-        neuron_subset_name=f'{args.neuron_subset_name}_{subset if subset else ""}'
+        neuron_subset_name=f'{args.neuron_subset_name}{f"_{subset}" if subset else ""}'
         intervention_type=args.intervention_type
     #make the save path
     save_paths = [make_save_path(
@@ -243,7 +246,7 @@ if __name__ == '__main__':
         neuron_subset_name=neuron_subset_name,
         intervention_type=intervention_type,
     )]
-    if args.neuron_subset_name!='baseline':
+    if args.neuron_subset_name!='baseline' and args.gate is None and args.post is None:
         save_paths.append(make_save_path(
             args,
             neuron_subset_name=f'{neuron_subset_name}_baseline',
@@ -284,7 +287,7 @@ if __name__ == '__main__':
             random_baseline=random_baseline,
             subset=subset,
             save_path=save_paths[0],
-            save_path_baseline=None if args.neuron_subset_name=='baseline' else save_paths[1],
+            save_path_baseline=None if len(save_paths)==1 else save_paths[1],
             neuron_subset_name=neuron_subset_name,
             intervention_type=intervention_type,
         )
