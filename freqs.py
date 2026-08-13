@@ -56,20 +56,18 @@ if __name__=='__main__':
     else:
         DATA_DIR = args.data_dir
 
-    if 'all' in args.subexperiments:#TODO fix code for layer_plots, category_plots, table, 
+    if 'all' in args.subexperiments:#TODO fix code for layer_plots, category_plots, table
         subexps = ["layer_plots", "category_plots", "scatter_plots", "table", "selected", "all_layers", "norms"]
     else:
         subexps = args.subexperiments
 
     #tensor of frequency by neuron
-    SUMMARY_DIR = (
-        os.path.join(os.environ["WORK"], 'GLUScope-results')
-        if "WORK" in os.environ
-        else os.path.join('neuroscope', 'results')
-    )
+    SUMMARY_DIR = os.path.join(os.environ.get("WORK", '..'), 'GLUScope-results')
+    if not os.path.exists(SUMMARY_DIR):
+        SUMMARY_DIR = os.path.join('neuroscope', 'results')
     SUMMARY_PATH = os.path.join(
         SUMMARY_DIR,
-        args.model.split('/')[-1],
+        args.model.split('/')[-1].strip('-hf'),
         f'summary{"_refactored" if args.refactor_glu else ""}.pt'
         )
     summary_dict = torch.load(SUMMARY_PATH, map_location="cuda:0")
