@@ -29,7 +29,7 @@ def compare_and_plot(args, metric, neuron_subset_names, intervention_type='zero_
         df = tables.quartile_df(list_data=list_data, subtitles=subtitles)
         if args.table_format in ["markdown", "md"]:
             df.to_markdown(
-                os.path.join(experiment_dir, f'{metric}{"_log" if args.log else ""}.md'),
+                os.path.join(experiment_dir, f'{metric}.md'),
                 index=False
             )
         else:
