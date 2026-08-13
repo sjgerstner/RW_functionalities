@@ -1,10 +1,10 @@
 """Code to create the plots for the RW functionalities paper"""
 
 import itertools
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
-from pandas.io.formats.style import Styler
 from scipy import stats
 import torch
 import einops
@@ -12,11 +12,9 @@ import einops
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .utils import (
-    COMBO_TO_NAME, VANILLA_CATEGORIES,
-    make_combo_name_dict, floats_to_strings,
-    half_coarse_categories
-)
+from .utils import half_coarse_categories
+from .plotting_utils import get_names
+from .tables import layerwise_count_df, df_to_nice_latex
 
 # torch.set_grad_enabled(False)
 #TODO if necessary, use inference mode WITHIN the functions
@@ -25,37 +23,6 @@ DEVICE='cuda:0'
 
 plt.rcParams['font.size'] = 10
 plt.rcParams['font.family'] = "serif"
-
-# CATEGORY_COLORS = {
-#     (1,1,1):(1,1,0,1),
-#     (1,1,0):(1,1,0,.5),
-#     (1,0,1):(.5,.5,0,1),
-#     (1,0,0):(.5,.5,0,0.5),
-#     (0,1,1):(0,0,0,1),
-#     (0,1,0):(0.25,.25,0.25,0.5),#new: (0,0,0,.5) grey
-#     (0,0,1):(0.9,0.9,0.9,1),#new: (0,.5,0,1) greenish
-#     (-1,1,1):(0,0,1,1),
-#     (-1,1,0):(0,0,1,.5),
-#     (-1,0,1):(0,.5,.5,1),
-#     (-1,0,0):(0,.5,.5,0.5),
-# }
-
-CATEGORY_COLORS = {
-    key: (
-        max(0,key[0]) * (key[1]+1) *.5,
-        .5 if key[1]==0 else max(0,key[0]),
-        max(0,-key[0]) * (key[1]+1)/2,
-        (key[2]+1)/2,
-    )
-    for key in COMBO_TO_NAME
-}
-CATEGORY_COLORS[(0,0,1)]=(0.9,0.9,0.9,1)
-
-VANILLA_COLORS = {
-    1: CATEGORY_COLORS[(1,1,1)],
-    0: CATEGORY_COLORS[(0,0,1)],
-    -1: CATEGORY_COLORS[(-1,1,1)],
-}
 
 SHORT_TO_LONG = {
     "gatelin":"$cos(w_{gate}, w_{in})$",
@@ -79,18 +46,6 @@ ARRANGEMENT_NEEDED_LIST = [
     "plot_fine", "plots_norms", "plot_cosines_vs_norms", "plot_norm_in_norm_out"
 ]
 
-def make_color_dict(category_keys:list[str])->dict[str, tuple[float,float,float,float]]:
-    value_list = np.linspace(-1,1, num=len(category_keys))
-    return {
-        key: (
-            (1-max(0,-value_list[i])),
-            (1-max(0,-value_list[i])),
-            (1-max(0,value_list[i])),
-            abs(value_list[i])**0.5 if value_list[i]<0 else 1,
-        )
-        for i,key in enumerate(category_keys)
-    }
-
 def _short_to_long(key:str)->str:
     if key in SHORT_TO_LONG:
         return SHORT_TO_LONG[key]
@@ -99,30 +54,6 @@ def _short_to_long(key:str)->str:
     keys = key.split('_')
     combo, metric_type = '_'.join(keys[:-1]), keys[-1]
     return f"{SHORT_TO_LONG[metric_type]} {SHORT_TO_LONG[combo]}"
-
-def make_full_key_list(key_list:list[float])->list[str]:
-    old_len = len(key_list)
-    step_size = min(abs(key_list[i+1]-key_list[i]) for i in range(old_len-1))
-    float_list = np.linspace(-1,1, num = round(2/step_size), endpoint=False).tolist()
-    return floats_to_strings(float_list)
-
-def get_names(results:dict):
-    if isinstance(next(iter(results)), tuple):
-        names_and_colors, combo_to_name = CATEGORY_COLORS, COMBO_TO_NAME
-        new_results={COMBO_TO_NAME[key]:value for key,value in results.items()}
-    elif isinstance(next(iter(results)), int):
-        names_and_colors, combo_to_name = VANILLA_COLORS, VANILLA_CATEGORIES
-        new_results={VANILLA_CATEGORIES[key]:value for key,value in results.items()}
-    else:
-        new_results = {}
-        #print(results.keys())
-        key_list = list(results.keys())
-        for key in key_list:
-            new_results[f"{key:.2f}"] = results[key]#add string-formatted keys
-        key_list = make_full_key_list(key_list)
-        combo_to_name = make_combo_name_dict(key_list, make_string_keys=False)
-        names_and_colors = make_color_dict(key_list)
-    return names_and_colors, combo_to_name, new_results
 
 def my_survey(
     results:dict, model_name:str|None=None, white_text=True, text_threshold=-1,
@@ -200,19 +131,6 @@ def my_survey(
         ax.set_title(model_name)
 
     return fig, ax
-
-def make_table(layerwise_counts):
-    _, combo_name_dict, layerwise_counts = get_names(layerwise_counts)
-    #print(combo_name_dict, layerwise_counts.keys())
-    df = pd.DataFrame.from_dict(layerwise_counts, orient='columns')
-    df.rename(
-        columns=combo_name_dict,
-        inplace=True,#not strictly necessary but for clarity
-    )
-    df.index.name = 'Layer'
-    df.loc['Total'] = df.sum()
-    styler = Styler(df)
-    return styler
 
 def wcos_plot(data, layer_list, arrangement):
     if "gateout" in data:
@@ -414,15 +332,30 @@ def plot_all_medians(
     )
     return fig, ax
 
-def histogram_subplot(ax, diff_nonzero, neuron_subset_name, **kwargs):
+def histogram_subplot(ax:plt.Axes, diff_nonzero:np.ndarray, neuron_subset_name:str, **kwargs):
     ax.hist(diff_nonzero, **kwargs)
     ax.set_title(neuron_subset_name.replace(' ', '\n'))
     return ax
 
 def aligned_histograms(
-    list_data, subtitles, savefile, suptitle=None, xlabel='', ylabel='number of model predictions',
-    ncols=1, n_bins=None, weighted=False, **kwargs
+    list_data:list[np.ndarray], subtitles:list[str], savefile:str,
+    suptitle:str|None=None, xlabel:str='', ylabel:str='number of model predictions',
+    ncols:int=1, n_bins:int | Sequence[float] | str | None=None, weighted=False, **kwargs
 ):
+    """Plot and save aligned histograms, i.e., with x and y axes properly aligned.
+
+    Args:
+        list_data (list[ndarray]):
+            list of datasets to plot, each of which is represented as a flat numpy array.
+        subtitles (list[str]): title of each subplot
+        savefile (str): path to save the plot
+        suptitle (str, optional): title of the whole plot. Defaults to None (no title).
+        xlabel (str, optional): label of x axis (shared by all subplots). Defaults to '' (no label).
+        ylabel (str, optional): label of y axis (shared by all subplots). Defaults to 'number of model predictions'.
+        ncols (int, optional): number of columns (defines how the subplots are laid out within the plot). Defaults to 1.
+        n_bins (int | Sequence[float] | str | None, optional): passed to the matplotlib hist() function to define number of bins. Defaults to None.
+        weighted (bool, optional): if True, make a weighted histogram. Defaults to False.
+    """
     nplots = len(list_data)
     nrows = int(np.ceil(nplots/ncols))
     #ncols = len(list_list_data[0])
@@ -815,8 +748,9 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
     #coarse table of category stats
     if "make_table" in experiments:
         print('> coarse-grained data as latex table')
-        styler = make_table(data['category_stats'])
-        styler.to_latex(
+        df = layerwise_count_df(data['category_stats'])
+        df_to_nice_latex(
+            df,
             f"{path}/table.tex",
             label=f'tab:{model_name}',
             caption=f'Distribution of neuron IO classes by layer and category in {model_name}',
@@ -849,8 +783,9 @@ def make_all_weight_based_plots(experiments, data, model_name, path, **kwargs):
                 print(half_coarse.keys())
         if "half_coarse_table" in experiments:
             print('> half-coarse table')
-            styler = make_table(half_coarse)
-            styler.to_latex(
+            df = layerwise_count_df(half_coarse)
+            df_to_nice_latex(
+                df,
                 f"{path}/half_coarse_table.tex",
                 label=f'tab:{model_name}_half_coarse',
                 caption=f'Distribution of neuron IO cosines by layer in {model_name}',

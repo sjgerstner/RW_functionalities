@@ -11,6 +11,7 @@ from transformer_lens.model_bridge import TransformerBridge
 import neuron_choice
 from src.weight_analysis_utils.plotting import SHORT_TO_LONG, _short_to_long, aligned_histograms, freq_sim_scatter, plot_any_vs_any
 from src.weight_analysis_utils.utils import COMBO_TO_NAME
+from utils import get_data_dir
 
 def load_wout_norms(model_name:str)->torch.Tensor:
     work_dir = os.environ["WORK"] if "WORK" in os.environ else '..'
@@ -36,7 +37,7 @@ if __name__=='__main__':
     #parser.add_argument('--neuroscope_dir', default='OLMo-7B-0424')
     parser.add_argument(
         '--data_dir',
-        default=None,#'../RW_functionalities_results',
+        default=None,
     )
     parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
     parser.add_argument('--refactor_glu', action='store_true')
@@ -47,14 +48,10 @@ if __name__=='__main__':
     parser.add_argument('--subexperiments', nargs='+', default=['all'])
     parser.add_argument('--layer_list', nargs='+', default=[0, 15, 31], type=int)
     parser.add_argument('--device', default='cuda:0')
+    parser.add_argument('--legacy', action='store_true')
     args = parser.parse_args()
 
-    if args.data_dir is None:
-        if "WORK" not in os.environ:
-            os.environ["WORK"]='..'
-        DATA_DIR = os.environ["WORK"] + '/RW_functionalities_results'
-    else:
-        DATA_DIR = args.data_dir
+    DATA_DIR = get_data_dir(args)
 
     if 'all' in args.subexperiments:#TODO fix code for layer_plots, category_plots, table
         subexps = ["layer_plots", "category_plots", "scatter_plots", "table", "selected", "all_layers", "norms"]

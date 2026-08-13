@@ -2,7 +2,7 @@ set -euox pipefail
 
 model=$1
 n_neuron_variants=("strengthening" "weakening" "None")
-names=("strengthening" "conditional strengthening" "proportional change" "conditional weakening" "weakening" "orthogonal output")
+names=("strengthening" "conditional_strengthening" "proportional_change" "conditional_weakening" "weakening" "orthogonal_output")
 
 #GPU assignment logic
 # Detect GPUs
@@ -42,13 +42,12 @@ for intervention_type in {mean_ablation,zero_ablation}; do
 
         neurons=""
         for name in "${names[@]}"; do
-            if [$name -eq $n_neurons]; then
-                neurons+="$name ";
-            else
-                neurons+="$name$n_neurons "
-            fi
+            if [ "$name" = "$n_neurons" ] || [ "$n_neurons" = "None" ]; then neurons+="$name ";
+            else if [ "$name" = "strengthening" ] && [ "$n_neurons" = "weakening" ]; then :;
+            else neurons+="${name}_${n_neurons} "
+            fi fi
         done
-        neurons="$neurons% "
+        #neurons="$neurons% "
 
         #GPU assignment logic
         while true; do
@@ -62,11 +61,12 @@ for intervention_type in {mean_ablation,zero_ablation}; do
 
         (
             export CUDA_VISIBLE_DEVICES="$physical_gpu"
-            python -m entropy.compare \
+            python -m entropy.compare_and_plot \
                 --model $model \
                 --experiment_name "${model}/${n_neurons}_${intervention_type}" \
                 --intervention_type $intervention_type \
-                --neurons $neurons
+                --neurons $neurons \
+                --table_format md
         ) &
         GPU_JOB_PIDS[$gpu_id]=$!
 
@@ -84,11 +84,12 @@ for intervention_type in {mean_ablation,zero_ablation}; do
 
     (
         export CUDA_VISIBLE_DEVICES="$physical_gpu"
-        python -m entropy.compare \
+        python -m entropy.compare_and_plot \
             --model $model \
-            --experiment_name "${model}/weakening_${intervention_type}" \
+            --experiment_name "${model}/weakening_complete_${intervention_type}" \
             --intervention_type $intervention_type \
-            --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post-
+            --neurons weakening weakening_gate+_post+ weakening_gate+_post- weakening_gate-_post+ weakening_gate-_post- \
+            --table_format md
     ) &
     GPU_JOB_PIDS[$gpu_id]=$!
 

@@ -9,6 +9,7 @@ from src.weight_analysis_utils.utils import NAME_TO_COMBO
 from entropy.entropy_intervention import run_intervention_experiment
 from neuron_choice import neuron_choice
 from ablation_utils.utils import get_mean_values
+from utils import get_data_dir
 from neuroscope.a_dataset import tokenize_dataset
 
 def make_save_path(args, neuron_subset_name, intervention_type):
@@ -43,7 +44,7 @@ def run_with_baseline(
 ):
     if neuron_subset_name is None:
         if neuron_list:
-            neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+            neuron_subset_name=f'{args.neuron_subset_name}_{subset if subset else ""}'
             intervention_type=args.intervention_type
         else:
             neuron_subset_name='baseline'
@@ -227,12 +228,14 @@ if __name__ == '__main__':
                 subset = float(args.n_neurons)
             except RuntimeError as e:
                 raise RuntimeError(f"could not parse args.n_neurons: {args.n_neurons}") from e
+        data_dir = get_data_dir(args)
         neuron_list, random_baseline = neuron_choice(
             args,
-            category_key=NAME_TO_COMBO[args.neuron_subset_name],
+            category_key=NAME_TO_COMBO[args.neuron_subset_name.replace('_', ' ')],
             subset=subset,
+            data_dir=data_dir,
         )
-        neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+        neuron_subset_name=f'{args.neuron_subset_name}_{subset if subset else ""}'
         intervention_type=args.intervention_type
     #make the save path
     save_paths = [make_save_path(
