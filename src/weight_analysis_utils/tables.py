@@ -19,6 +19,8 @@ def layerwise_count_df(layerwise_counts):
 def quartile_df(
     list_data:list[np.ndarray], subtitles:list[str],
 ):
+    # for data in list_data:
+    #     print(data[:2])
     quantiles = [np.quantile(data, q=[0, .25, .5, .75, 1]) for data in list_data]
     df = pd.DataFrame.from_dict(
         {

@@ -1,14 +1,5 @@
 import os
-
 import torch
-
-# import sys
-# print(sys.path)
-# sys.path.append('/mounts/work/sgerstner/RW_functionalities/src')
-
-from src.weight_analysis_utils import plotting
-
-#TODO put plotting stuff into separate file to avoid uselessly importing plotting
 
 #%%
 def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation')->torch.Tensor:
@@ -34,18 +25,25 @@ def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='z
     #print('computing difference...')
     if metric=='scale':
         baseline = torch.log(baseline)
+        # print("number of nan entries in 'baseline' tensor:", baseline.isnan().sum().item())
+        # print("number of inf entries in 'baseline' tensor:", baseline.isinf().sum().item())
         ablated = torch.log(ablated)
+        # print("number of nan entries in 'ablated' tensor:", ablated.isnan().sum().item())
+        # print("number of inf entries in 'ablated' tensor:", ablated.isinf().sum().item())
         #diff = baseline / ablated
     #else:
     diff = baseline - ablated
+    # print("number of nan entries in 'diff' tensor:", diff.isnan().sum())
     return diff
 
 def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation'):
     diff = unflattened_data(data_path, metric, neuron_subset_name, intervention_type)
     diff_flattened = diff.flatten()
-    #remove zeros, corresponding to padding
-    diff_nonzero = diff_flattened[diff_flattened.nonzero()].cpu().numpy()
-    return diff_nonzero
+    #remove zeros (or nans), corresponding to padding
+    keep_or_not = (diff_flattened!=0) & ~(diff_flattened.isnan())
+    diff_nonzero = diff_flattened[keep_or_not.nonzero()]
+    #print("number of nan values in diff_nonzero:", diff_nonzero.isnan().sum().item())
+    return diff_nonzero.cpu().numpy()
 
 def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'):
     data_dir = args.data_dir if args.data_dir is not None else os.environ["WORK"]+'/RW_functionalities_results'
@@ -57,7 +55,7 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
         if not os.path.exists(os.path.join(data_path, neuron_subset_name)):
             print(neuron_subset_name, "not found")
             continue
-        #print(neuron_subset_name)
+        print(neuron_subset_name)
         diffs[neuron_subset_name] = compute_data(
             data_path, metric, neuron_subset_name, intervention_type
         )
@@ -65,7 +63,7 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
         if baseline_exists:
             baseline_name = neuron_subset_name+'_baseline'
             baseline_names.append(baseline_name)
-            #print(baseline_name)
+            print(baseline_name)
             diffs[baseline_name] = compute_data(
                 data_path, metric, baseline_name, intervention_type
             )
