@@ -53,9 +53,11 @@ def neuron_choice(
     # with open(f"{path}/data.pickle", 'rb') as f:
     #     data = pickle.load(f)
     data_path = f"{path}/data.pt"
-    if not os.path.exists(data_path):
+    if not os.path.exists(data_path) or (hasattr(args, "refactor_glu") and args.refactor_glu):
         data_path = f"{path}/refactored/data.pt"
+    #print(data_path)
     data = torch.load(data_path, map_location=args.device)
+    #print(data.keys())
     neuron_tensor = torch.nonzero(is_in_category(data['categories'],category_key))
     neuron_list = [(int(line[0].item()), int(line[1].item())) for line in neuron_tensor]
     if subset is not None:

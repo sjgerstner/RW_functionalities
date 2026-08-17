@@ -101,6 +101,8 @@ if __name__=='__main__':
     PLOT_DIR = f'{DATA_DIR}/plots/{args.combo}_{args.metric_type}/{args.model}'
     os.makedirs(PLOT_DIR, exist_ok=True)
 
+    xlabel = _short_to_long(f"{args.combo}_{args.metric_type}")#TODO check it works in all cases
+
     #plotting by layer
     LAYER_PATH = f'{PLOT_DIR}/layers{"_log" if args.log else ""}.pdf'
     if "layer_plots" in subexps:#not os.path.exists(LAYER_PATH):
@@ -109,7 +111,7 @@ if __name__=='__main__':
             [f"Layer {i}" for i in range(n_layers)],
             savefile = LAYER_PATH,
             #suptitle = f"{SHORT_TO_LONG[args.combo]} by layer in {args.model}",
-            xlabel=_short_to_long(args.combo),#TODO there's a bug here
+            xlabel=xlabel,
             ylabel="proportion of neurons",
             ncols=4,
             log=args.log,
@@ -138,7 +140,7 @@ if __name__=='__main__':
                 )),
                 savefile=CATEGORY_PATH,
                 #suptitle=f"{SHORT_TO_LONG[args.combo]} of neurons in {args.model}",
-                xlabel=SHORT_TO_LONG[args.combo],#TODO there's a bug here
+                xlabel=xlabel,
                 ylabel="proportion of neurons",
                 ncols=2,
                 log=args.log,
@@ -150,7 +152,7 @@ if __name__=='__main__':
                 #tensor of category by neuron
                 PATH = f"{DATA_DIR}/results/{args.model}"
                 DATA_PATH = f"{PATH}/data.pt"
-                if not os.path.exists(DATA_PATH):
+                if not os.path.exists(DATA_PATH) or args.refactor_glu:
                     DATA_PATH = f"{PATH}/refactored/data.pt"
                 data = torch.load(DATA_PATH)
                 # with open(f"{PATH}/data.pickle", 'rb') as f:
