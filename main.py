@@ -162,7 +162,7 @@ if __name__=="__main__":
     else:
         models = args.model
 
-    if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:
+    if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:#TODO this should not be default
         model_to_medians_dict = {}
     for model_name in models:
         print(model_name)
