@@ -56,13 +56,21 @@ def make_color_dict(category_keys:list[str])->dict[str, tuple[float,float,float,
     }
 
 def get_names(results:dict):
-    if isinstance(next(iter(results)), tuple):
+    """The idea is that new_results will have names as keys, not tuples
+
+    Args:
+        results (dict): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    if isinstance(next(iter(results)), tuple):#usually appears in my_survey, i.e. the coarse bar plot
         names_and_colors, combo_to_name = CATEGORY_COLORS, COMBO_TO_NAME
         new_results={COMBO_TO_NAME[key]:value for key,value in results.items()}
     elif isinstance(next(iter(results)), int):
         names_and_colors, combo_to_name = VANILLA_COLORS, VANILLA_CATEGORIES
         new_results={VANILLA_CATEGORIES[key]:value for key,value in results.items()}
-    else:
+    elif isinstance(next(iter(results)), float):
         new_results = {}
         #print(results.keys())
         key_list = list(results.keys())

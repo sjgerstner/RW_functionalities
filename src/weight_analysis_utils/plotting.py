@@ -92,7 +92,7 @@ def my_survey(
         [
             new_results[key] if key in new_results
             else torch.zeros(n_layers, device=original_results_device)
-            for key in names_and_colors.keys()
+            for key in combo_to_name.values()
         ],
         dim=-1
     ).cpu())
@@ -112,7 +112,6 @@ def my_survey(
         widths = data[:,i]
         starts = data_cum[:, i] - widths
         rects = ax.barh(labels, widths, left=starts,
-                        #height=0.5,
                         label=combo_to_name[key], color=color,
                         edgecolor="black")
         if text_threshold>=0 and any(widths>text_threshold):
