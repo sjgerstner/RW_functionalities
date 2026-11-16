@@ -22,12 +22,14 @@ def get_mean_values(args):
         else post_string.replace('post+', 'in-').replace('post-', 'in+')
         for post_string in relevant_cases_post
     ]
-    mean_values = torch.sum(torch.stack([
+    numerator = torch.sum(torch.stack([
             summary_dict[(case_key,'freq')]*torch.nan_to_num(summary_dict[(case_key, 'hook_post', 'sum')])
             for case_key in relevant_cases_in
-        ], dim=0), dim=0) / torch.sum(torch.stack([
+        ], dim=0), dim=0)
+    denominator = torch.sum(torch.stack([
             summary_dict[case_key,'freq'] for case_key in relevant_cases_in
         ], dim=0), dim=0)
+    mean_values = torch.where(denominator>0, numerator / denominator, 0)
     return mean_values
 
 def make_hooks(args, layer, neuron, conditioning_value=None, sign=1, mean_value:float|torch.Tensor=0.0, positions:torch.Tensor|None=None):

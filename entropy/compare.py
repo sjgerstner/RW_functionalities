@@ -1,28 +1,18 @@
-#%%
-from argparse import ArgumentParser
-#from itertools import chain
 import os
-
 import torch
-
-# import sys
-# print(sys.path)
-# sys.path.append('/mounts/work/sgerstner/RW_functionalities/src')
-
-from src.weight_analysis_utils import plotting
-
-#TODO put plotting stuff into separate file to avoid uselessly importing plotting
 
 #%%
 def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation')->torch.Tensor:
     #print('loading data...')
     baseline = torch.load(
         f'{data_path}/baseline/None_None/{metric}.pt',
-        weights_only=True
+        weights_only=True,
+        map_location='cuda:0' if torch.cuda.is_available() else 'cpu',
     )
     ablated = torch.load(
         f'{data_path}/{neuron_subset_name}/{intervention_type}_None/{metric}.pt',
-        weights_only=True
+        weights_only=True,
+        map_location='cuda:0' if torch.cuda.is_available() else 'cpu',
     )#sample pos
     if baseline.shape[0]!=ablated.shape[0]:
         #for some reason an earlier version of dolma-small had 45734 rows
@@ -35,42 +25,36 @@ def unflattened_data(data_path, metric, neuron_subset_name, intervention_type='z
     #print('computing difference...')
     if metric=='scale':
         baseline = torch.log(baseline)
+        # print("number of nan entries in 'baseline' tensor:", baseline.isnan().sum().item())
+        # print("number of inf entries in 'baseline' tensor:", baseline.isinf().sum().item())
         ablated = torch.log(ablated)
+        # print("number of nan entries in 'ablated' tensor:", ablated.isnan().sum().item())
+        # print("number of inf entries in 'ablated' tensor:", ablated.isinf().sum().item())
         #diff = baseline / ablated
     #else:
     diff = baseline - ablated
+    # print("number of nan entries in 'diff' tensor:", diff.isnan().sum())
     return diff
 
 def compute_data(data_path, metric, neuron_subset_name, intervention_type='zero_ablation'):
-    # #print('loading data...')
-    # baseline = torch.load(
-    #     f'{data_path}/baseline/None_None/{metric}.pt',
-    #     weights_only=True
-    # )
-    # ablated = torch.load(
-    #     f'{data_path}/{neuron_subset_name}/{intervention_type}_None/{metric}.pt',
-    #     weights_only=True
-    # )#sample pos
-    # #print('computing difference...')
-    # if metric=='scale':
-    #     diff = baseline / ablated
-    # else:
-    #     diff = baseline - ablated
     diff = unflattened_data(data_path, metric, neuron_subset_name, intervention_type)
-    #print('flattening and removing zeros...')
     diff_flattened = diff.flatten()
-    #remove zeros, corresponding to padding
-    diff_nonzero = diff_flattened[diff_flattened.nonzero()].cpu().numpy()
-    return diff_nonzero
+    #remove zeros (or nans), corresponding to padding
+    keep_or_not = (diff_flattened!=0) & ~(diff_flattened.isnan())
+    diff_nonzero = diff_flattened[keep_or_not.nonzero()]
+    #print("number of nan values in diff_nonzero:", diff_nonzero.isnan().sum().item())
+    return diff_nonzero.cpu().numpy()
 
-def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation', **kwargs):
-    absrel = '-' #'/' if metric=='scale' else '-'
+def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'):
     data_dir = args.data_dir if args.data_dir is not None else os.environ["WORK"]+'/RW_functionalities_results'
     data_path = f'{data_dir}/intervention_results/{args.model}/{args.dataset}'
     print('computing data...')
     diffs = {}
     baseline_names=[]
     for neuron_subset_name in neuron_subset_names:
+        if not os.path.exists(os.path.join(data_path, neuron_subset_name)):
+            print(neuron_subset_name, "not found")
+            continue
         print(neuron_subset_name)
         diffs[neuron_subset_name] = compute_data(
             data_path, metric, neuron_subset_name, intervention_type
@@ -83,68 +67,4 @@ def compare(args, metric, neuron_subset_names, intervention_type='zero_ablation'
             diffs[baseline_name] = compute_data(
                 data_path, metric, baseline_name, intervention_type
             )
-    # list_data = list(chain.from_iterable(
-    #     (diffs[name], diffs[name+'_baseline']) for name in neuron_subset_names
-    # ))
-    list_data = list(diffs.values())
-    #subtitles = list(chain.from_iterable((name, name+'_baseline') for name in neuron_subset_names))
-    subtitles = list(k.replace('_', ' ', 1) for k in diffs)
-    experiment_dir = f'{data_dir}/{args.plot_dir}/{args.experiment_name}'
-    if not os.path.exists(experiment_dir):
-        os.makedirs(experiment_dir, exist_ok=True)
-    if args.log:
-        kwargs["log"]=True
-    metric = "log_scale" if metric=='scale' else metric
-    plotting.aligned_histograms(
-        list_data,
-        subtitles=subtitles,
-        savefile=f'{experiment_dir}/{metric}{"_log" if args.log else ""}.pdf',
-        suptitle = None,#f'{absrel} effect of neurons on {metric},\nas measured by {intervention_type}',
-        xlabel=f'{metric}(clean) {absrel} {metric}(ablated)',
-        ncols = 2,
-        **kwargs
-    )
-
-#%%
-if __name__=='__main__':
-    parser = ArgumentParser()
-    parser.add_argument('--data_dir',
-        default=None,#'../RW_functionalities_results',
-    )
-    parser.add_argument('--plot_dir', default='plots/ablations')
-    parser.add_argument('--experiment_name', type=str)
-    parser.add_argument('--model', default='allenai/OLMo-7B-0424-hf')
-    parser.add_argument('--dataset', default='dolma-small')
-    parser.add_argument('--metric', default='all')
-    parser.add_argument(
-        '--intervention_type',
-        choices=[
-            "zero_ablation",
-            "threshold_ablation",
-            "fixed_activation",
-            "relu_ablation",
-            "mean_ablation"
-        ],
-        default="zero_ablation",
-    )
-    parser.add_argument(
-        '--log', type=bool, default=True, help="logarithmic y-axis in the histograms"
-    )
-    parser.add_argument('--neurons', nargs='+', default=['weakening'])
-    args = parser.parse_args()
-    if "WORK" not in os.environ:
-        os.environ["WORK"]='..'
-    if args.metric=='all':
-        for metric in ['entropy', 'loss', 'rank', 'scale']:
-            print(metric)
-            compare(
-                args, metric=metric, neuron_subset_names=args.neurons,
-                intervention_type=args.intervention_type,
-                #log=True
-            )
-    else:
-        compare(
-            args, metric=args.metric, neuron_subset_names=args.neurons,
-            intervention_type=args.intervention_type,
-            #log=True
-        )
+    return diffs, data_dir

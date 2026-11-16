@@ -9,6 +9,8 @@ from src.weight_analysis_utils.utils import NAME_TO_COMBO
 from entropy.entropy_intervention import run_intervention_experiment
 from neuron_choice import neuron_choice
 from ablation_utils.utils import get_mean_values
+from utils import get_data_dir
+from neuroscope.a_dataset import tokenize_dataset
 
 def make_save_path(args, neuron_subset_name, intervention_type):
     if 'WORK' not in os.environ:
@@ -19,7 +21,7 @@ def make_save_path(args, neuron_subset_name, intervention_type):
         neuron_subset_name+=f'_post{args.post}'
     return os.path.join(
         os.environ['WORK'],
-        args.data_dir,
+        'RW_functionalities_results',#args.data_dir,
         args.output_dir,
         args.model,
         args.token_dataset.split('/')[-1],
@@ -42,7 +44,7 @@ def run_with_baseline(
 ):
     if neuron_subset_name is None:
         if neuron_list:
-            neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+            neuron_subset_name=f'{args.neuron_subset_name}_{subset if subset else ""}'
             intervention_type=args.intervention_type
         else:
             neuron_subset_name='baseline'
@@ -65,7 +67,7 @@ def run_with_baseline(
         mean_values=mean_values,
         save_path=save_path,
     )
-    if random_baseline is not None and args.gate is None and args.post is None:
+    if not args.test and random_baseline is not None and args.gate is None and args.post is None:
         run_if_necessary(
             args,
             model,
@@ -122,7 +124,10 @@ if __name__ == '__main__':
     # general arguments
     # parser.add_argument('--work_dir', default='.')
     # parser.add_argument('--wcos_dir', default='.')
-    parser.add_argument('--data_dir', default='RW_functionalities_results')
+    parser.add_argument(
+        '--data_dir',
+        default=None,#'RW_functionalities_results'
+    )
     parser.add_argument(
         '--output_dir', default='intervention_results')
     parser.add_argument(
@@ -187,6 +192,18 @@ if __name__ == '__main__':
     #     '--separate', action='store_true',
     #     help='also do the ablation analysis for each neuron separately'
     # )
+    #tokenization args
+    parser.add_argument('--add_bos_token', type=bool, default=True,
+                        help="add bos token to every example")
+    parser.add_argument('--max_length', type=int, default=1024,
+                        help="length of example token blocks")
+    parser.add_argument('--return_overflowing_tokens', type=bool, default=False,
+                        help="""Make additional training examples with overflowing tokens.
+                        In this case it is currently not possible to keep the ids and metadata.""")
+    parser.add_argument('--padding', type=bool, default=False,
+                        help="pad examples to args.max_length")
+    #test
+    parser.add_argument('--test', action='store_true')
 
     args = parser.parse_args()
 
@@ -214,12 +231,14 @@ if __name__ == '__main__':
                 subset = float(args.n_neurons)
             except RuntimeError as e:
                 raise RuntimeError(f"could not parse args.n_neurons: {args.n_neurons}") from e
+        data_dir = get_data_dir(args)
         neuron_list, random_baseline = neuron_choice(
             args,
-            category_key=NAME_TO_COMBO[args.neuron_subset_name],
+            category_key=NAME_TO_COMBO[args.neuron_subset_name.replace('_', ' ')],
             subset=subset,
+            data_dir=data_dir,
         )
-        neuron_subset_name=f'{args.neuron_subset_name}{subset if subset else ""}'
+        neuron_subset_name=f'{args.neuron_subset_name}{f"_{subset}" if subset else ""}'
         intervention_type=args.intervention_type
     #make the save path
     save_paths = [make_save_path(
@@ -227,7 +246,7 @@ if __name__ == '__main__':
         neuron_subset_name=neuron_subset_name,
         intervention_type=intervention_type,
     )]
-    if args.neuron_subset_name!='baseline':
+    if args.neuron_subset_name!='baseline' and args.gate is None and args.post is None:
         save_paths.append(make_save_path(
             args,
             neuron_subset_name=f'{neuron_subset_name}_baseline',
@@ -247,10 +266,17 @@ if __name__ == '__main__':
         model.eval()
         torch.set_grad_enabled(False)
 
-        tokenized_dataset = datasets.load_from_disk(
+        dataset = datasets.load_from_disk(
             args.token_dataset
         )
-        tokenized_dataset = tokenized_dataset.select_columns('input_ids')
+        assert isinstance(dataset, datasets.Dataset)
+        if not args.model.startswith('allenai/OLMo-1B') and not args.model.startswith('allenai/OLMo-7B'):
+            tokenized_dataset, _tokenizer = tokenize_dataset(args, dataset)
+        tokenized_dataset = dataset.select_columns('input_ids')
+        tokenized_dataset = tokenized_dataset.with_format('torch')
+        if args.test:
+            print(tokenized_dataset)
+            print(tokenized_dataset[0])
 
         run_with_baseline(
             args,
@@ -261,7 +287,7 @@ if __name__ == '__main__':
             random_baseline=random_baseline,
             subset=subset,
             save_path=save_paths[0],
-            save_path_baseline=None if args.neuron_subset_name=='baseline' else save_paths[1],
+            save_path_baseline=None if len(save_paths)==1 else save_paths[1],
             neuron_subset_name=neuron_subset_name,
             intervention_type=intervention_type,
         )

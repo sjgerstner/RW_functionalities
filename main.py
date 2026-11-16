@@ -162,7 +162,7 @@ if __name__=="__main__":
     else:
         models = args.model
 
-    if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:
+    if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:#TODO this should not be default
         model_to_medians_dict = {}
     for model_name in models:
         print(model_name)
@@ -200,7 +200,7 @@ if __name__=="__main__":
             figheight=3 if full_width else 4,
             loc='lower left',
             bbox_to_anchor=(0,0),
-            fontsize=9,
+            fontsize=8,
             ncol=2 if full_width else 1,
         )
         fig. savefig(f'{DATA_DIR}/results/selected_medians.pdf', bbox_inches='tight')
