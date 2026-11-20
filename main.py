@@ -59,7 +59,10 @@ def analysis(
     and then does the analyses specified in the args"""
 
     #path
-    path = f"{DATA_DIR}/results/{model_name}"
+    if os.path.isdir(model_name):#local model path: save results next to the model
+        path = model_name
+    else:
+        path = f"{DATA_DIR}/results/{model_name}"
     if args.refactor_glu:
         path += '/refactored'
     if checkpoint_value is not None:
@@ -166,11 +169,12 @@ if __name__=="__main__":
         model_to_medians_dict = {}
     for model_name in models:
         print(model_name)
+        display_name = os.path.basename(os.path.normpath(model_name)) if os.path.isdir(model_name) else model_name
         if args.checkpoints==[None]:
             data = analysis(args, model_name)
             if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:
                 #model_to_medians_dict[model_name] = data["linout_quartiles"][2,:].flatten().cpu()
-                model_to_medians_dict[model_name] = utils.torch_quantile(data["linout"], q=.5, dim=1)
+                model_to_medians_dict[display_name] = utils.torch_quantile(data["linout"], q=.5, dim=1)
             del data
         else:
             model_to_checkpoints = loading.legacy_checkpoint_list()
