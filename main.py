@@ -149,6 +149,7 @@ if __name__=="__main__":
         default=[0,14,27],
         help="selected layers for main paper plot"
     )
+    parser.add_argument('--plot_medians', nargs='+', choices=['all', 'selected'], default=[])
     parser.add_argument('--median_plot_name', default='medians')
     args = parser.parse_args()
 
@@ -165,14 +166,14 @@ if __name__=="__main__":
     else:
         models = args.model
 
-    if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:#TODO this should not be default
+    if args.plot_medians:
         model_to_medians_dict = {}
     for model_name in models:
         print(model_name)
         display_name = os.path.basename(os.path.normpath(model_name)) if os.path.isdir(model_name) else model_name
         if args.checkpoints==[None]:
             data = analysis(args, model_name)
-            if "plot_all_medians" in args.experiments or "plot_selected_medians" in args.experiments:
+            if args.plot_medians:
                 #model_to_medians_dict[model_name] = data["linout_quartiles"][2,:].flatten().cpu()
                 model_to_medians_dict[display_name] = utils.torch_quantile(data["linout"], q=.5, dim=1)
             del data
@@ -185,11 +186,11 @@ if __name__=="__main__":
                     #cache_dir='/nfs/datz/olmo_models',#TODO
                 )
                 del data
-    if "plot_all_medians" in args.experiments:
+    if "all" in args.plot_medians:
         fig, ax = plotting.plot_all_medians(model_to_medians_dict)
         fig.savefig(f'{DATA_DIR}/results/{args.median_plot_name}.pdf', bbox_inches='tight')
         plt.close()
-    if "plot_selected_medians" in args.experiments:
+    if "selected" in args.plot_medians:
         full_width=False#TODO
         tiny_models = [
             model_name for model_name in MODEL_LIST

@@ -10,8 +10,8 @@ EXPERIMENT_LIST = [
     "plot_coarse",#create coarse-grained plot (categories by layer)
     "make_table",
     "plot_boxplots",#make boxplots of cosine similarities by layer
-    "plot_all_medians",#make one plot with the median cos(w_in,w_out) similarities (y) across layers (x) of all models (one line per model)
-    "plot_selected_medians",
+    # "plot_all_medians",#make one plot with the median cos(w_in,w_out) similarities (y) across layers (x) of all models (one line per model)
+    # "plot_selected_medians",
     "plot_norms",
     "plots_cosines_vs_norms",
     "plot_norm_in_norm_out",
